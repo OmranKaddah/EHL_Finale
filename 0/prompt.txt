@@ -1,0 +1,7 @@
+<environment_context>
+  <cwd>/home/omran/Projects/EHL_Finale</cwd>
+  <shell>bash</shell>
+  <current_date>2026-10-09</current_date>
+  <timezone>Europe/Berlin</timezone>
+  <filesystem><workspace_roots><root>/home/omran/Projects/EHL_Finale</root></workspace_roots><permission_profile type="managed"><file_system type="restricted"><entry access="read"><special>:root</special></entry><entry access="read"><path>/home/omran/Projects/EHL_Finale</path></entry><entry access="read"><special>:slash_tmp</special></entry><entry access="read"><special>:tmpdir</special></entry><entry access="read"><path>/home/omran/Projects/EHL_Finale/.git</path></entry><entry access="read"><path>/home/omran/Projects/EHL_Finale/.agents</path></entry><entry access="read"><path>/home/omran/Projects/EHL_Finale/.codex</path></entry><entry access="read"><path>/home/omran/Projects/EHL_Finale/.aws</path></entry></file_system></permission_profile></filesystem>
+</environment_context>
