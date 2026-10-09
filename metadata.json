@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4H638R9H2SEZHRDD1NJY7PA",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "HACKATHON_QUICKSTART.md",
+    "LIBRARY_AUDIT.md",
+    "LIBRARY_USAGE.md",
+    "README.md",
+    "pyproject.toml",
+    "src/hackathon_toolkit/__init__.py",
+    "src/hackathon_toolkit/api.py",
+    "src/hackathon_toolkit/cli.py",
+    "src/hackathon_toolkit/config.py",
+    "src/hackathon_toolkit/matching.py",
+    "src/hackathon_toolkit/output.py",
+    "src/hackathon_toolkit/pipeline.py",
+    "src/hackathon_toolkit/rag.py",
+    "src/hackathon_toolkit/search.py",
+    "tests/test_library_composition.py",
+    "tests/test_library_packaging.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 209045,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2346112,
+    "output_tokens": 23031,
+    "api_call_count": 33
+  }
+}

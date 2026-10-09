@@ -1,0 +1,93 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4H638R9H2SEZHRDD1NJY7PA",
+  "session_id": "01a12257-4d98-7891-93f4-34bd39d68aca",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-09T20:36:26.865090727Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "HACKATHON_QUICKSTART.md",
+    "LIBRARY_AUDIT.md",
+    "LIBRARY_USAGE.md",
+    "README.md",
+    "pyproject.toml",
+    "src/hackathon_toolkit/__init__.py",
+    "src/hackathon_toolkit/api.py",
+    "src/hackathon_toolkit/cli.py",
+    "src/hackathon_toolkit/config.py",
+    "src/hackathon_toolkit/matching.py",
+    "src/hackathon_toolkit/output.py",
+    "src/hackathon_toolkit/pipeline.py",
+    "src/hackathon_toolkit/rag.py",
+    "src/hackathon_toolkit/search.py",
+    "tests/test_library_composition.py",
+    "tests/test_library_packaging.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-sol",
+  "turn_id": "1c2de1b803c6",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 209045,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 2346112,
+    "output_tokens": 23031,
+    "api_call_count": 33
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-09T20:36:26.848764045Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 143,
+    "total_committed": 0,
+    "total_lines_changed": 143,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1478,
+      "user_lines_removed": 143,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "HACKATHON_QUICKSTART.md": 4,
+        "LIBRARY_AUDIT.md": 69,
+        "LIBRARY_USAGE.md": 459,
+        "README.md": 8,
+        "pyproject.toml": 8,
+        "src/hackathon_toolkit/__init__.py": 40,
+        "src/hackathon_toolkit/api.py": 24,
+        "src/hackathon_toolkit/cli.py": 22,
+        "src/hackathon_toolkit/config.py": 12,
+        "src/hackathon_toolkit/matching.py": 11,
+        "src/hackathon_toolkit/output.py": 12,
+        "src/hackathon_toolkit/pipeline.py": 163,
+        "src/hackathon_toolkit/rag.py": 3,
+        "src/hackathon_toolkit/search.py": 7,
+        "tests/test_library_composition.py": 122,
+        "tests/test_library_packaging.py": 201
+      },
+      "user_removed_per_file": {
+        "HACKATHON_QUICKSTART.md": 1,
+        "README.md": 2,
+        "pyproject.toml": 2,
+        "src/hackathon_toolkit/__init__.py": 1,
+        "src/hackathon_toolkit/api.py": 37,
+        "src/hackathon_toolkit/cli.py": 82,
+        "src/hackathon_toolkit/config.py": 10,
+        "src/hackathon_toolkit/matching.py": 3,
+        "src/hackathon_toolkit/output.py": 2,
+        "src/hackathon_toolkit/rag.py": 2,
+        "src/hackathon_toolkit/search.py": 1
+      }
+    }
+  ]
+}
