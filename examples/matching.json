@@ -1,0 +1,12 @@
+{
+  "requirements": [
+    {"attribute": "memory", "operator": "gte", "value": 64, "unit": "gigabyte", "mandatory": true, "evidence": "at least 64 GB RAM"},
+    {"attribute": "peak_power", "operator": "lte", "value": 300, "unit": "watt", "mandatory": true, "evidence": "must not exceed 300 W"},
+    {"attribute": "gpu", "operator": "or_better", "value": "RTX 4080", "mandatory": false, "evidence": "RTX 4080 or better is preferred"}
+  ],
+  "specifications": {
+    "memory": {"value": 65536, "unit": "megabyte", "evidence": "Memory: 64 GB RAM"},
+    "peak_power": {"value": 250, "unit": "watt", "evidence": "250 W peak"},
+    "gpu": {"value": "RTX 4090", "evidence": "GPU: RTX 4090"}
+  }
+}

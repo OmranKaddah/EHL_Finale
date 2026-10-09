@@ -1,0 +1,10 @@
+{
+  "title": "SimpleTechnical",
+  "type": "object",
+  "properties": {
+    "manufacturer": {"type": ["string", "null"], "description": "Exact manufacturer name or null"},
+    "model_code": {"type": ["string", "null"], "description": "Exact model identifier or null"},
+    "memory_gb": {"type": ["integer", "null"], "description": "RAM in GB or null"}
+  },
+  "required": ["manufacturer", "model_code", "memory_gb"]
+}

@@ -1,0 +1,18 @@
+services:
+  typesense:
+    image: typesense/typesense:30.2
+    ports:
+      - "8108:8108"
+    volumes:
+      - typesense_data:/data
+    environment:
+      TYPESENSE_API_KEY: ${TYPESENSE_API_KEY:?Set TYPESENSE_API_KEY in environment}
+    command: --data-dir /data --api-key=${TYPESENSE_API_KEY} --enable-cors
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8108/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  typesense_data:
