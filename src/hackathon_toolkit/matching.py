@@ -5,9 +5,16 @@ from typing import Any
 import re
 
 from pydantic import BaseModel, Field
-from pint import UnitRegistry
+from functools import lru_cache
 
-_units = UnitRegistry(autoconvert_offset_to_baseunit=True)
+
+@lru_cache(maxsize=1)
+def _unit_registry():
+    try:
+        from pint import UnitRegistry
+    except ImportError as exc:
+        raise ImportError("Unit conversion requires hackathon-toolkit[matching]") from exc
+    return UnitRegistry(autoconvert_offset_to_baseunit=True)
 
 
 class Outcome(str, Enum):
@@ -71,8 +78,9 @@ def _compare(constraint: Constraint, actual: Specification, hierarchy: dict[str,
         if constraint.unit or actual.unit:
             if not constraint.unit or not actual.unit:
                 raise ValueError("both values need units")
+            units = _unit_registry()
             try:
-                observed = (_units.Quantity(observed, actual.unit)).to(constraint.unit).magnitude
+                observed = (units.Quantity(observed, actual.unit)).to(constraint.unit).magnitude
             except Exception as exc:
                 raise ValueError("incompatible or invalid units") from exc
         if op == "range":

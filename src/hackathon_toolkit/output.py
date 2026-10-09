@@ -6,9 +6,18 @@ import json
 import asyncio
 import random
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
-import httpx
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import httpx
+
+
+class Submitter(Protocol):
+    """Adapter contract; callers own injected clients and their lifecycle."""
+
+    async def submit(self, key: str, result: dict, *, dry_run: bool = False) -> str: ...
 
 
 def export_results(records: list[dict[str, Any]], format: str) -> str:
@@ -54,6 +63,7 @@ class HTTPSubmitter:
 
     async def submit(self, key: str, result: dict, *, dry_run: bool = False) -> str:
         if dry_run: return "dry-run"
+        import httpx
         client = self.client or httpx.AsyncClient(timeout=self.timeout)
         try:
             headers = {"Idempotency-Key": key}

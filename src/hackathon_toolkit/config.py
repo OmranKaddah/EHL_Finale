@@ -75,20 +75,22 @@ class Settings:
             scheduling_policy=get("SCHEDULING_POLICY", cls.scheduling_policy),
             log_level=get("LOG_LEVEL", cls.log_level),
         )
-        if value.chunk_size <= 0 or not 0 <= value.chunk_overlap < value.chunk_size:
-            raise ValueError("CHUNK_OVERLAP must be smaller than positive CHUNK_SIZE")
-        if value.pdf_detail not in {"auto", "low", "high"}:
-            raise ValueError("LLM_PDF_DETAIL must be auto, low, or high")
-        if value.document_parser not in {"llm", "docling", "pymupdf", "tabular"}:
-            raise ValueError("DOCUMENT_PARSER must be llm, docling, pymupdf, or tabular")
-        if value.extraction_backend not in {"llm", "gliner", "auto"}:
-            raise ValueError("EXTRACTION_BACKEND must be llm, gliner, or auto")
-        if value.processing_mode not in {"fast", "balanced", "accurate"}:
-            raise ValueError("PROCESSING_MODE must be fast, balanced, or accurate")
-        if value.scheduling_policy not in {"fifo", "priority", "earliest_deadline_first"}:
-            raise ValueError("invalid SCHEDULING_POLICY")
-        if min(value.max_document_mb, value.embedding_dimensions, value.max_workers,
-               value.tabular_rows_per_table,
-               value.max_llm_requests, value.typesense_port) <= 0:
-            raise ValueError("size, dimensions, worker count, and port must be positive")
         return value
+
+    def __post_init__(self) -> None:
+        if self.chunk_size <= 0 or not 0 <= self.chunk_overlap < self.chunk_size:
+            raise ValueError("CHUNK_OVERLAP must be smaller than positive CHUNK_SIZE")
+        if self.pdf_detail not in {"auto", "low", "high"}:
+            raise ValueError("LLM_PDF_DETAIL must be auto, low, or high")
+        if self.document_parser not in {"llm", "docling", "pymupdf", "tabular"}:
+            raise ValueError("DOCUMENT_PARSER must be llm, docling, pymupdf, or tabular")
+        if self.extraction_backend not in {"llm", "gliner", "auto"}:
+            raise ValueError("EXTRACTION_BACKEND must be llm, gliner, or auto")
+        if self.processing_mode not in {"fast", "balanced", "accurate"}:
+            raise ValueError("PROCESSING_MODE must be fast, balanced, or accurate")
+        if self.scheduling_policy not in {"fifo", "priority", "earliest_deadline_first"}:
+            raise ValueError("invalid SCHEDULING_POLICY")
+        if min(self.max_document_mb, self.embedding_dimensions, self.max_workers,
+               self.tabular_rows_per_table,
+               self.max_llm_requests, self.typesense_port) <= 0:
+            raise ValueError("size, dimensions, worker count, and port must be positive")

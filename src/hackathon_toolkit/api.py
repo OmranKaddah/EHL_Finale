@@ -17,6 +17,7 @@ from .matching import Constraint, Specification, match_requirements
 from .models import Document, ProcessingRequest
 from .processing import Job, JobProcessor, JobStore
 from .schemas import BUILTIN_SCHEMAS
+from .pipeline import create_pipeline, create_search
 
 
 class MatchRequest(BaseModel):
@@ -46,15 +47,9 @@ class AskRequest(BaseModel):
 
 
 def _search_engine(settings: Settings):
-    from .embeddings import EmbeddingService
     from .cache import SQLiteCache
-    from .search import TypesenseSearch
-    embedder = EmbeddingService(model=settings.embedding_model, dimensions=settings.embedding_dimensions,
-                                cache=SQLiteCache(settings.sqlite_path) if settings.enable_cache else None)
-    return TypesenseSearch(host=settings.typesense_host, port=settings.typesense_port,
-        protocol=settings.typesense_protocol, api_key=settings.typesense_api_key,
-        collection=settings.typesense_collection, dimensions=settings.embedding_dimensions,
-        embedding_model=settings.embedding_model, embedder=embedder)
+    return create_search(settings=settings,
+                         cache=SQLiteCache(settings.sqlite_path) if settings.enable_cache else None)
 
 
 def create_app(*, settings: Settings | None = None, upload_dir: str | Path = ".hackkit_uploads",
@@ -83,33 +78,11 @@ def create_app(*, settings: Settings | None = None, upload_dir: str | Path = ".h
         if extractor is not None:
             result = await extractor(document, request)
             return result.model_dump(mode="json") if hasattr(result, "model_dump") else result
-        from .parsing import DoclingDocumentParser, LLMDocumentParser, PyMuPDFDocumentParser, TabularDocumentParser, ParseOptions
-        from .extraction import GLiNERExtractionBackend, OpenAIExtractionBackend, choose_backend
-        from .cache import CachedParser, CachedExtractor
         schema = BUILTIN_SCHEMAS[request.schema_name]
-        backend_name = choose_backend(request.backend, request.parser, schema)
-        backend = (GLiNERExtractionBackend(settings.local_model) if backend_name == "gliner" else
-                   OpenAIExtractionBackend(model=settings.extraction_model, pdf_detail=settings.pdf_detail))
-        if cache is not None:
-            backend = CachedExtractor(backend, cache, version="extraction-v2")
-        if backend_name == "llm" and request.parser == "llm" and not request.parse_first:
-            async with llm_limiter:
-                return (await backend.extract(document, schema)).model_dump(mode="json")
-        parser = (DoclingDocumentParser() if request.parser == "docling" else
-                  PyMuPDFDocumentParser() if request.parser == "pymupdf" else
-                  TabularDocumentParser(settings.tabular_rows_per_table) if request.parser == "tabular" else
-                  LLMDocumentParser())
-        if cache is not None:
-            parser = CachedParser(parser, cache, version="parser-v2")
-        if request.parser == "llm":
-            async with llm_limiter:
-                parsed = await parser.parse(document, ParseOptions(model=settings.parser_model, pdf_detail=settings.pdf_detail))
-        else:
-            parsed = await parser.parse(document, ParseOptions(model=settings.parser_model, pdf_detail=settings.pdf_detail))
-        if backend_name == "llm":
-            async with llm_limiter:
-                return (await backend.extract(parsed, schema)).model_dump(mode="json")
-        return (await backend.extract(parsed, schema)).model_dump(mode="json")
+        pipeline = create_pipeline(schema, settings=settings, parser_name=request.parser,
+                                   backend_name=request.backend, parse_first=request.parse_first,
+                                   cache=cache, limiter=llm_limiter)
+        return (await pipeline.extract(document, schema)).model_dump(mode="json")
 
     async def job_worker(job: Job) -> dict:
         payload = ExtractRequest.model_validate(job.payload)
@@ -125,8 +98,10 @@ def create_app(*, settings: Settings | None = None, upload_dir: str | Path = ".h
                                  policy="edf" if settings.scheduling_policy == "earliest_deadline_first" else settings.scheduling_policy)
         await processor.start()
         await processor.recover()
-        yield
-        await processor.stop()
+        try:
+            yield
+        finally:
+            await processor.stop()
 
     app = FastAPI(title="Hackathon Toolkit", lifespan=lifespan)
 
@@ -213,4 +188,16 @@ def create_app(*, settings: Settings | None = None, upload_dir: str | Path = ".h
     return app
 
 
-app = create_app()
+_default_app: FastAPI | None = None
+
+
+async def app(scope, receive, send):
+    """Lazy ASGI compatibility entry point; prefer create_app with --factory.
+
+    Merely importing this module does not read settings or create application
+    resources. The ASGI server initializes the default app on its first call.
+    """
+    global _default_app
+    if _default_app is None:
+        _default_app = create_app()
+    await _default_app(scope, receive, send)

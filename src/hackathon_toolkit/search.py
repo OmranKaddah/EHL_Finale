@@ -4,7 +4,10 @@ import json
 from typing import Any, Literal
 from urllib.parse import quote
 
-import httpx
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import httpx
 from pydantic import BaseModel
 
 from .models import DocumentChunk
@@ -39,12 +42,14 @@ class TypesenseSearch:
         ]}
 
     async def health(self) -> bool:
+        import httpx
         try:
             return bool((await self._request("GET", "/health")).json().get("ok"))
         except (httpx.HTTPError, ValueError):
             return False
 
     async def _request(self, method: str, path: str, **kwargs) -> httpx.Response:
+        import httpx
         if not self.key: raise ValueError("TYPESENSE_API_KEY is required")
         client = self.client or httpx.AsyncClient(timeout=30)
         try:
@@ -56,6 +61,7 @@ class TypesenseSearch:
             if self.client is None: await client.aclose()
 
     async def ensure_collection(self) -> None:
+        import httpx
         path = f"/collections/{quote(self.collection)}"
         try:
             existing = (await self._request("GET", path)).json()

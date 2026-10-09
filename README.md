@@ -8,7 +8,7 @@ Requires Python 3.11+. From this directory:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[test,api]'
+.venv/bin/python -m pip install -e '.[test,api,llm,matching]'
 cp .env.example .env
 ```
 
@@ -89,6 +89,12 @@ Indexing uses OpenAI `text-embedding-3-small`, default 1536 dimensions. Query em
 
 ## Python usage
 
+The toolkit can be installed with `pip install -e .` and imported from any Python
+project. See [LIBRARY_USAGE.md](LIBRARY_USAGE.md) for each public component and a
+complete offline challenge pipeline, and [LIBRARY_AUDIT.md](LIBRARY_AUDIT.md) for
+the library audit. The base dependency is Pydantic; add `llm`, `search`, `http`,
+`matching`, `api`, `local`, or `office` extras for the integrations you use.
+
 ```python
 import asyncio
 from hackathon_toolkit.ingestion import ingest_file
@@ -106,7 +112,7 @@ asyncio.run(main())
 `Document`, `ParsedDocument`, `ExtractionResult`, `Constraint`, `DocumentChunk`, `ProcessingRequest`, and `ProcessingResult` are Pydantic models. `LLMDocumentParser`, `DoclingDocumentParser`, `TabularDocumentParser`, `GLiNERExtractionBackend`, `EmbeddingService`, `TypesenseSearch`, `run_workflow`, and `JobProcessor` have injectable dependencies for local tests. The optional FastAPI app exposes uploads, extraction, matching, search, Q&A, and queued jobs:
 
 ```bash
-uvicorn hackathon_toolkit.api:app --reload
+uvicorn hackathon_toolkit.api:create_app --factory --reload
 curl --data-binary @examples/documents/technical_spec.txt 'http://localhost:8000/documents?filename=technical_spec.txt'
 ```
 

@@ -1,7 +1,10 @@
 # 15-minute challenge setup
 
+Install with `pip install -e '.[llm,matching,search]'` for the CLI examples.
+For direct Python imports and a complete custom pipeline, see [LIBRARY_USAGE.md](LIBRARY_USAGE.md).
+
 1. Copy `.env.example` to `.env`, set `OPENAI_API_KEY`, and load it with `set -a; source .env; set +a`.
-2. Define the target output as a JSON Schema object in `examples/schemas/`, or add a Pydantic model to `schemas.py` and register it in `BUILTIN_SCHEMAS`.
+2. Define the target output as a JSON Schema object in `examples/schemas/`, or define a Pydantic model in your challenge code and pass it directly to `extract(source, YourModel)`.
 3. Pick `--backend llm` for arbitrary nested outputs. For local text entities, install `.[local]`, use `--parser docling --backend gliner`, and keep fields to strings or string lists.
    For CSV/XLSX use `--parser tabular --parse-first`; install `.[office]` for XLSX.
 4. Set `JOB_TIMEOUT_SECONDS` and `WINDOW_DURATION_SECONDS`. Create `ProcessingRequest` instances with UTC deadlines. Choose `JobProcessor(policy="edf")` for deadline ordering.
