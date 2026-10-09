@@ -1,0 +1,3 @@
+I want to git remote add origin git@github.com:OmranKaddah/EHL_Finale.git
+git branch -M main
+git push -u origin main
