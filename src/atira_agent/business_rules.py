@@ -1,6 +1,7 @@
 """Deterministic scope, precedence and matching rules; no browser knowledge."""
 from __future__ import annotations
 
+import unicodedata
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from email.utils import parseaddr
@@ -13,6 +14,12 @@ ZERO = Decimal(0)
 
 class Unresolved(ValueError):
     pass
+
+
+def normalized_text(value: str) -> str:
+    """Compare visible identifiers while discarding invisible format marks."""
+    return "".join(char for char in unicodedata.normalize("NFKC", value)
+                   if unicodedata.category(char) != "Cf").strip()
 
 
 def money(value: Decimal) -> Decimal:
@@ -31,10 +38,12 @@ def valid_on(item, date: datetime) -> bool:
 
 
 def latest(items, *, date: datetime, reference: str, sender: str, subject: str, **scope):
-    applicable = [x for x in items if x.reference == reference and
-                  parseaddr(x.sender)[1].casefold() == sender.casefold() and
-                  subject.casefold() in x.subject.casefold() and aware(x.sent_at) <= aware(date) and
-                  all(getattr(x, key) == value for key, value in scope.items())]
+    applicable = [x for x in items if normalized_text(x.reference) == normalized_text(reference) and
+                  normalized_text(parseaddr(x.sender)[1]).casefold() == normalized_text(sender).casefold() and
+                  normalized_text(subject).casefold() in normalized_text(x.subject).casefold() and aware(x.sent_at) <= aware(date) and
+                  all(normalized_text(getattr(x, key)) == normalized_text(value)
+                      if isinstance(getattr(x, key), str) and isinstance(value, str) else getattr(x, key) == value
+                      for key, value in scope.items())]
     if not applicable:
         return None
     applicable.sort(key=lambda x: aware(x.sent_at), reverse=True)
@@ -47,14 +56,14 @@ def latest(items, *, date: datetime, reference: str, sender: str, subject: str, 
 
 def remaining_qa(answers, date: datetime):
     dated = [x for x in answers if aware(x.issued_at) <= aware(date)]
-    withdrawn = {target for x in dated for target in x.withdraws}
-    return sorted([x for x in dated if x.id not in withdrawn], key=lambda x: (aware(x.issued_at), x.id))
+    withdrawn = {normalized_text(target) for x in dated for target in x.withdraws}
+    return sorted([x for x in dated if normalized_text(x.id) not in withdrawn], key=lambda x: (aware(x.issued_at), x.id))
 
 
 def effective_position(position, answers):
     updates = {}
     for answer in answers:
-        if answer.position != position.position:
+        if normalized_text(answer.position or "") != normalized_text(position.position):
             continue
         for key in ("quantity", "unit", "commercial_key", "packaging_key", "commitment_key", "pool_keys", "ordinary_setup_eur"):
             value = getattr(answer, key)
@@ -68,7 +77,8 @@ def effective_position(position, answers):
 def engineering(requirement, answers, reserve: Decimal | None):
     attributes = requirement.attributes.model_dump()
     for answer in answers:
-        if answer.revision == requirement.revision and answer.requirement_id == requirement.requirement_id:
+        if (normalized_text(answer.revision or "") == normalized_text(requirement.revision) and
+                normalized_text(answer.requirement_id or "") == normalized_text(requirement.requirement_id)):
             unknown = set(answer.amendments) - set(attributes)
             if unknown:
                 raise Unresolved(f"Unsupported technical amendments: {sorted(unknown)}")

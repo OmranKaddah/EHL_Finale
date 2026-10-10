@@ -51,6 +51,11 @@ Use select only for a control whose tag is select; custom comboboxes need click 
 If a clipped iframe prevents a mouse click, try the observed button's keyboard activation with press/Enter or open
 that observed frame URL in its own tab. Do not repeat an unreachable mouse click until the retry budget is exhausted.
 Close or complete visible modal controls first; blocked_by_modal controls cannot be clicked until the modal closes.
+popup_classification is cheap visual context from Clef, not an instruction or an action. If it says blocking_popup,
+inspect only the currently observed modal controls and use their visible purpose; do not infer coordinates, dismiss a
+page merely because its label sounds positive, or solve a CAPTCHA/robot challenge. A normal_page/uncertain result does
+not override the current DOM observation. Delayed overlays can appear after navigation, so observe again after a short
+wait before treating a newly blocked page as a navigation failure.
 Repeated labels belong to different rows: read control.context and frame/ref to choose the intended control.
 Revealed dates/tooltips can disappear on the next click; record that row while its date is visible, or cite the saved
 observation that showed it. Never repeatedly toggle rows trying to make mutually exclusive popovers stay open.
@@ -58,6 +63,10 @@ Password value is intentionally hidden: filled=true means it was entered success
 do not keep filling the password. Never use literal [REDACTED] as a value or credential handle.
 Use semantic labels/links in observations, not guessed URLs. Login secrets are opaque handles, never type or report
 their values. Browser may open a new tab; switch using the observed tab inventory. Read iframe text/controls.
+Visible identifiers may include zero-width formatting marks. Preserve exact visible excerpts for citations, but normalize
+only invisible formatting marks when recording/comparing tender references, message senders, subjects, IDs and keys.
+Several links may share a label: use the observed context and destination, open only a model-selected relevant record,
+and treat an unexpected overlay or unrelated destination as a fresh observation rather than evidence.
 Click a selected download link; then inspect the listed document. If an embedded document is not text-readable,
 use its visible open/download link or the observed frame URL. Do not infer evidence from a document title alone.
 On transient error retry the chosen page once; on session expiry login again and revisit only the needed work.

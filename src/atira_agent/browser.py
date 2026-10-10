@@ -237,6 +237,12 @@ class BrowserSession:
                 try:
                     body = await frame.locator("body").inner_text(timeout=2000)
                     texts.append(f"[frame {frame_index}]\n{body}")
+                    # Canvas-rendered gates and diagrams can expose their only
+                    # readable description through accessibility metadata.
+                    semantics = await frame.locator("canvas[aria-label],[role=img][aria-label]").evaluate_all(
+                        "els => els.slice(0, 20).map(e => e.getAttribute('aria-label')).filter(Boolean)")
+                    if semantics:
+                        texts.append("[accessible visual descriptions]\n" + "\n".join(map(str, semantics)))
                     elements = await frame.query_selector_all(CONTROL_SELECTOR)
                     for index, element in enumerate(elements[:350]):
                         info = await element.evaluate(CONTROL_INFO)

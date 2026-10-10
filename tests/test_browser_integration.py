@@ -319,5 +319,7 @@ async def test_selected_tooltips_are_observed_before_the_next_hides_them(telemet
         browser.context.set_default_timeout(500)
         await browser.act("click", {"ref": target})
         assert "17" in (await browser.observe()).text
+        await browser.page.set_content('<canvas aria-label="Visible accessibility description"></canvas>')
+        assert "Visible accessibility description" in (await browser.observe()).text
     finally:
         await browser.close()

@@ -111,6 +111,13 @@ def test_authority_reference_future(priced_ledger):
                   sender="leitung@synthetic.test", subject="") == original
 
 
+def test_authority_comparison_ignores_zero_width_formatting(priced_ledger):
+    original = priced_ledger.all("discount")[0]
+    marked = original.model_copy(update={"reference": "TEST-\u200bRFQ", "subject": "Approval TEST-\u200bRFQ"})
+    assert latest([marked], date=DATE, reference="TEST-RFQ", sender="leitung@synthetic.test",
+                  subject="Approval TEST-RFQ") == marked
+
+
 def test_conditional_commitment_uses_pooled_quantity(priced_ledger):
     pos = priced_ledger.records["position"]["A"]
     priced_ledger.records["position"]["A"] = pos.model_copy(update={"commitment_key": "D"})
