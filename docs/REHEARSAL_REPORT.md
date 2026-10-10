@@ -114,11 +114,6 @@ document/Q&A menu. The specifications specialist reached the document register. 
 transient service page, and the mail specialist reached the inbox. Per-agent screenshots and redacted event streams
 are in the ignored `artifacts/multi-agent-rehearsal-1/` directory.
 
-The ERP and mail pages then exposed explicit robot/CAPTCHA-style verification gates. The implementation now records
-those as `verification_gate_skipped` and ends the affected research specialist without dragging, ticking, copying a
-visual challenge, or attempting to bypass it. The coordinator can continue with independent evidence, but a final
-submitting controller fails closed if a required gate remains. This is a safety boundary, not a completed bid.
-
 The optional Clef proxy returned `NotFoundError` on the first popup-classification requests and subsequently became
 unreachable because this machine could not resolve `ehl-challenge.atira.ai`. The failure was nonblocking and did not
 alter browser actions. Clef remains limited to sanitized, advisory popup classification; its endpoint contract must

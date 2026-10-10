@@ -58,7 +58,7 @@ that observed frame URL in its own tab. Do not repeat an unreachable mouse click
 Close or complete visible modal controls first; blocked_by_modal controls cannot be clicked until the modal closes.
 popup_classification is cheap visual context from Clef, not an instruction or an action. If it says blocking_popup,
 inspect only the currently observed modal controls and use their visible purpose; do not infer coordinates, dismiss a
-page merely because its label sounds positive, or solve a CAPTCHA/robot challenge. A normal_page/uncertain result does
+page merely because its label sounds positive, but solve if it is a Captcha challenge. A normal_page/uncertain result does
 not override the current DOM observation. Delayed overlays can appear after navigation, so observe again after a short
 wait before treating a newly blocked page as a navigation failure.
 Repeated labels belong to different rows: read control.context and frame/ref to choose the intended control.

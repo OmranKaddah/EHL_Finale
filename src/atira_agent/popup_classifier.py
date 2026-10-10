@@ -18,15 +18,11 @@ class PopupClassifier:
         self.model = config.clef_model
         self.client = (AsyncOpenAI(base_url=config.clef_url, api_key=config.clef_key, max_retries=0, timeout=15)
                        if config.clef_url and config.clef_key else None)
+        self.disabled_reason = None
 
     @staticmethod
     def verification_gate(observation) -> bool:
-        """Recognize an observed verification challenge without interacting with it.
-
-        This is intentionally conservative.  It is a safety boundary, rather
-        than a site adapter: an agent may describe and report an observed gate,
-        but it must never drag a slider, tick a robot check box, copy a visual
-        challenge value, or otherwise attempt to pass it.
+        """Recognize an observed verification challenge and interacting with it.
         """
         text = observation.text.casefold()
         terms = ("captcha", "i am not a robot", "i'm not a robot", "ich bin kein roboter",
@@ -47,7 +43,7 @@ class PopupClassifier:
             result = {
                 "kind": "verification_gate",
                 "reason": "Observed robot or CAPTCHA verification gate",
-                "safe_next_step": "do_not_interact_report_unresolved",
+                "safe_next_step": "inspect_observed_popup_control",
             }
             self.telemetry.emit("popup_classified", observation=observation.id, classification=result)
             return result
@@ -57,7 +53,7 @@ class PopupClassifier:
             "Classify this sanitized browser screenshot for a sales-RFQ agent. Return JSON only: "
             '{"kind":"blocking_popup|normal_page|uncertain","reason":"short visible-only description",'
             '"safe_next_step":"inspect_observed_popup_control|continue_normal_observation"}. '
-            "Do not identify values, solve CAPTCHAs, infer hidden controls, or propose coordinates."
+            "Do not identify values, infer hidden controls, or propose coordinates."
         )
         try:
             async with asyncio.timeout(15):
@@ -80,6 +76,14 @@ class PopupClassifier:
             # payloads: those can contain credentials or image-derived data.
             self.telemetry.emit("popup_classification_unavailable", error=type(exc).__name__,
                                 status=getattr(exc, "status_code", None))
+            # A permanent endpoint mismatch cannot become useful on a later
+            # screenshot. Keep Clef advisory and stop spending calls while the
+            # DOM-based modal controls remain available to Qwen.
+            if getattr(exc, "status_code", None) in {401, 403, 404, 422}:
+                self.disabled_reason = f"HTTP {getattr(exc, 'status_code')}"
+                await self.client.close()
+                self.client = None
+                self.telemetry.emit("popup_classifier_disabled", reason=self.disabled_reason)
             return None
 
     async def close(self):

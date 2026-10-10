@@ -327,6 +327,25 @@ async def test_selected_tooltips_are_observed_before_the_next_hides_them(telemet
 
 
 @pytest.mark.browser
+async def test_modal_blocker_is_rejected_before_playwright_retries_an_underlying_click(telemetry):
+    run = RunContext(challenge_id="rfq", brief="Synthetic modal guard", access=[],
+                     submission={"kind": "site", "url": "http://localhost"}, answer_schema={})
+    browser = BrowserSession(Config(False, (), "qwen", "qwen", "http://localhost", "local"),
+                             run, telemetry, headful=False)
+    try:
+        await browser.start()
+        await browser.page.set_content('''<button id="underlying">Continue</button>
+          <dialog open><button>Close notice</button></dialog>''')
+        observed = await browser.observe()
+        underlying = next(item for item in observed.controls if item["label"] == "Continue")
+        assert underlying["blocked_by_modal"]
+        with pytest.raises(ValueError, match="blocked by a modal"):
+            await browser.act("click", {"ref": underlying["ref"]})
+    finally:
+        await browser.close()
+
+
+@pytest.mark.browser
 @pytest.mark.parametrize("layout", ["table", "article"])
 async def test_inspection_result_retains_atomic_citations_for_transient_qa_details(telemetry, layout):
     """A row label and its issued date may only be visible in separate UI states."""

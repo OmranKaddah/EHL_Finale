@@ -1,4 +1,5 @@
 import httpx
+import pytest
 
 from atira_agent.browser import BrowserSession, origin
 from atira_agent.config import Config
@@ -41,6 +42,38 @@ def test_popup_classifier_only_runs_for_probable_blockers():
     assert not PopupClassifier.needed(Observation())
     Observation.text = "Cookie consent overlay"
     assert PopupClassifier.needed(Observation())
+
+
+async def test_clef_is_disabled_after_a_permanent_endpoint_error(telemetry):
+    class Failure(Exception):
+        status_code = 404
+
+    class Completions:
+        async def create(self, **_kwargs):
+            raise Failure()
+
+    class Chat:
+        def __init__(self):
+            self.completions = Completions()
+
+    class Client:
+        def __init__(self):
+            self.chat = Chat()
+
+        async def close(self):
+            return None
+
+    class Observation:
+        id = "o1"
+        controls = [{"inside_modal": True}]
+        text = "Cookie notice"
+
+    classifier = PopupClassifier(Config(False, (), "qwen", "qwen", "http://localhost", "local",
+                                       clef_url="http://localhost", clef_key="local"), telemetry)
+    classifier.client = Client()
+    assert await classifier.classify("ZmFrZQ==", Observation()) is None
+    assert classifier.client is None
+    assert classifier.disabled_reason == "HTTP 404"
 
 
 def test_verification_gate_is_classified_without_a_visual_model_call():
@@ -95,3 +128,12 @@ def test_research_only_blocks_the_runtime_declared_submission_path(telemetry):
     assert controller._targets_submission("click", {"ref": "o1-f0-e1"})
     assert not controller._targets_submission("navigate", {"url": "/questions"})
     assert not controller._targets_submission("navigate", {"url": "https://tender.test"})
+
+
+async def test_schema_without_a_kind_fails_with_a_recoverable_action_error(telemetry):
+    run = RunContext(challenge_id="rfq", brief="fixture", access=[],
+                     submission={"kind": "site", "url": "https://tender.test"}, answer_schema={})
+    controller = Orchestrator(run, Config(False, (), "qwen", "qwen", "http://localhost", "local"), None,
+                              None, telemetry, None)
+    with pytest.raises(ValueError, match="schema requires kind"):
+        await controller.execute(type("Action", (), {"action": "schema", "args": {}})())

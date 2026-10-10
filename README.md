@@ -65,16 +65,16 @@ changes team settings, or enables a paid model. A scored submission requires the
 `agent.json` installs the frozen runtime dependencies and runs `agent.py`. The sandbox connects exclusively to four
 supplied CDP Chromium instances, never launches another browser, and reads the task/schema/fresh credentials from the
 current-run API. A browserless coordinator assigns one runtime site to each tender, specifications, ERP and mail
-specialist. Local mode requires `CHALLENGE_SCOUTING` and launches four visible Chromium instances. Site addresses and+tender values are never compiled into application code. Each browser's request filter permits only its assigned runtime+origin (the tender browser also accesses the declared submission origin).
+specialist. Local mode requires `CHALLENGE_SCOUTING` and launches four visible Chromium instances. Site addresses and
++tender values are never compiled into application code. Each browser's request filter permits only its assigned runtime
++origin (the tender browser also accesses the declared submission origin).
 
 Qwen uses `QWEN_BASE_URL` and `QWEN_API_KEY` from Atira. No personal OpenAI key is needed. Optional OpenAI-compatible
 paid-provider configuration requires both `ATIRA_MODEL_PROVIDER=openai` and `ATIRA_ALLOW_PAID=1`, an explicit model,
 and an Atira proxy endpoint. Do not enable it without approval. Merely having a key does not activate paid inference.
 
 When Atira supplies `CLEF_BASE_URL` and `CLEF_API_KEY`, Clef classifies only sanitized screenshots that look like a
-blocking popup. Its result is advisory context for Qwen; it never clicks controls, navigates, solves a CAPTCHA, or
-receives a credential/TAN screenshot. An explicitly observed robot/CAPTCHA gate is classified locally and skipped
-without any visual-model request or interaction.
+blocking popup.
 
 Configuration: `ATIRA_BUDGET_SECONDS` (maximum 1200), `ATIRA_SUBMISSION_RESERVE` (default 180),
 `ATIRA_DASHBOARD_PORT` (default 8787). Sandbox platform expiry is an additional hard bound. Local scouting credential

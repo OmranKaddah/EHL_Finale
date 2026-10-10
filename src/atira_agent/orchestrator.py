@@ -143,6 +143,13 @@ class Orchestrator:
         if self.research_only and name in {"calculate", "prepare_submission", "fill_answer", "request_tan",
                                            "capture_tan", "sign", "receipt", "api_submit"}:
             raise ValueError("This specialist publishes evidence only; the central orchestrator owns pricing and signing")
+        if name in {"click", "fill", "select", "check", "press"} and self.observation:
+            control = next((item for item in self.observation.controls if item["ref"] == args.get("ref")), None)
+            if control and control.get("blocked_by_modal"):
+                modal_labels = [str(item.get("label") or "control") for item in self.observation.controls
+                                if item.get("inside_modal")]
+                choices = ", ".join(modal_labels[:6]) or "an observed inside-modal control"
+                raise ValueError(f"Selected control is blocked by a modal; choose: {choices}")
         if name == "read_links":
             results = []
             try:
@@ -164,7 +171,12 @@ class Orchestrator:
                 results.append({"error": safe_error(exc, self.telemetry.redactor)})
             return results
         if name == "schema":
-            kinds = args.get("kinds", [args.get("kind")])
+            kinds = args.get("kinds") or ([args["kind"]] if args.get("kind") else [])
+            if not kinds:
+                raise ValueError("schema requires kind or a nonempty kinds list; choose an observed record type")
+            unknown = [kind for kind in kinds if kind not in RECORD_TYPES]
+            if unknown:
+                raise ValueError(f"Unknown record kind(s): {', '.join(map(str, unknown))}")
             return {kind: RECORD_TYPES[kind].model_json_schema() for kind in kinds}
         if name == "cite":
             items = args.get("citations", [args])

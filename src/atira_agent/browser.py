@@ -159,6 +159,14 @@ class BrowserSession:
         return self.refs[reference]
 
     async def _click(self, element):
+        # A delayed DOM modal can appear between Qwen's observation and its
+        # chosen click.  Detect that state before Playwright spends its full
+        # timeout retrying the now-blocked control.  The controller receives a
+        # fresh observation and Qwen still chooses the visible modal action.
+        blocked_now = await element.evaluate(
+            "e => {const m=document.querySelector('dialog[open],[role=dialog][aria-modal=true]'); return !!m && !m.contains(e)}")
+        if blocked_now:
+            raise ValueError("Observed control is now blocked by a modal; observe and choose an inside-modal control")
         try:
             await element.click(no_wait_after=True)
         except BrowserTimeoutError as exc:
