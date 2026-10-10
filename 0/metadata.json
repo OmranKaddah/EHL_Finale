@@ -1,0 +1,44 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KB3V5129X8TJK19FG0ED9F",
+  "session_id": "01a12684-607c-7d32-aa33-54c278f15363",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T16:42:50.9299945Z",
+  "branch": "fresh-start",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "docs/REHEARSAL_REPORT.md",
+    "src/atira_agent/orchestrator.py",
+    "src/atira_agent/popup_classifier.py",
+    "tests/test_multi_agent.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "6eaf62b76a5c",
+  "checkpoint_transcript_start": 736,
+  "transcript_lines_at_start": 736,
+  "compact_transcript_start": 98,
+  "token_usage": {
+    "input_tokens": 95689,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 3987580,
+    "output_tokens": 8812,
+    "api_call_count": 42
+  },
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T16:42:50.8516605Z",
+    "agent_lines": 71,
+    "agent_removed": 3,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 71,
+    "total_lines_changed": 74,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
