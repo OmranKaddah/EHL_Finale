@@ -1,0 +1,5 @@
+Read /Users/yueouli/.hermes/cache/scratch/ehl-phase1-codex-scout-brief.md and execute that scouting assignment now. You own only scratch outputs, not production code. Report sanitized findings to the specified findings.md as you discover them. This is scouting only, not a live scored run.
+
+---
+
+Read /Users/yueouli/.hermes/cache/scratch/ehl-phase1-codex-scout-brief.md and execute that scouting assignment now. You own only scratch outputs, not production code. Report sanitized findings to the specified findings.md as you discover them. This is scouting only, not a live scored run.

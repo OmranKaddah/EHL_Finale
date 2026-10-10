@@ -1,0 +1,51 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KSWP5XE9ZQN76WV6WGRA0Q",
+  "session_id": "01a1278b-1293-7320-abac-1fed08285e83",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T21:00:52.405238Z",
+  "branch": "Leonie",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/PHASE1_REVIEW_GATE.md"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-sol",
+  "turn_id": "31e011181d4c",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 47738,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 580864,
+    "output_tokens": 3523,
+    "api_call_count": 14
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T21:00:52.384187Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 37,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 37,
+    "total_lines_changed": 37,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1199,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "src/rfq_agent/deadline.py": 52,
+        "src/rfq_agent/draft.py": 385,
+        "src/rfq_agent/redact.py": 65,
+        "src/rfq_agent/submission.py": 290,
+        "tests/test_submission.py": 407
+      }
+    }
+  ]
+}
