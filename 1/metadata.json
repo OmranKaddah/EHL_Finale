@@ -1,0 +1,84 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4K4FFZY3DGBH5GWF6W9Z7KR",
+  "session_id": "01a12639-b531-7c93-9951-6728e53e5b4c",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T14:46:39.490137Z",
+  "branch": "vlad",
+  "checkpoints_count": 3,
+  "save_step_count": 3,
+  "files_touched": [
+    "README.md",
+    "agent.json",
+    "pyproject.toml"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "37a33061c8b5",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 89314,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 486400,
+    "output_tokens": 4328,
+    "api_call_count": 16,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 3
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T14:46:39.47959Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 180,
+    "total_committed": 0,
+    "total_lines_changed": 180,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 1582,
+      "user_lines_removed": 180,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "README.md": 31,
+        "agent.json": 3,
+        "docs/AGENT_SPEC.md": 282,
+        "pyproject.toml": 5,
+        "src/rfq_agent/__init__.py": 3,
+        "src/rfq_agent/__main__.py": 47,
+        "src/rfq_agent/browser.py": 40,
+        "src/rfq_agent/evidence.py": 37,
+        "src/rfq_agent/model.py": 22,
+        "src/rfq_agent/planner.py": 543,
+        "src/rfq_agent/run_contract.py": 81,
+        "uv.lock": 488
+      },
+      "user_removed_per_file": {
+        "README.md": 151,
+        "agent.json": 3,
+        "pyproject.toml": 26
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1582,
+      "agent_lines_removed": 180
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1582,
+      "agent_lines_removed": 180
+    }
+  ]
+}
