@@ -34,6 +34,15 @@ async def main() -> int:
         )
     completed = sum(isinstance(result, dict) for result in results)
     failed = len(results) - completed
+    for result in results:
+        if isinstance(result, dict):
+            print(
+                f"[{result['site_id']}] stopped after {result['steps']} steps; "
+                f"evidence records={result['evidence_count']}; reason={result['stop_reason']}",
+                flush=True,
+            )
+        else:
+            print(f"Investigator failed ({type(result).__name__})", flush=True)
     evidence_count = len(await ledger.snapshot())
     print(
         f"Exploration finished: {completed} investigators completed, {failed} failed; "
