@@ -1,0 +1,336 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KRHP80V64M95GQ4BTP5V5K",
+  "session_id": "01a126b2-2644-74e0-b348-e27a3baeec42",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T20:37:25.749304Z",
+  "branch": "vlad",
+  "checkpoints_count": 28,
+  "save_step_count": 28,
+  "files_touched": [
+    "README.md",
+    "agent.json",
+    "docs/AGENT_SPEC.md",
+    "docs/COMPLIANCE.md",
+    "docs/NEXT_SESSION.md",
+    "docs/ROBUSTNESS.md",
+    "pyproject.toml",
+    "src/rfq_agent/__main__.py",
+    "src/rfq_agent/answer.py",
+    "src/rfq_agent/browser.py",
+    "src/rfq_agent/documents.py",
+    "src/rfq_agent/evidence.py",
+    "src/rfq_agent/investigation.py",
+    "src/rfq_agent/loop.py",
+    "src/rfq_agent/mail.py",
+    "src/rfq_agent/missions.py",
+    "src/rfq_agent/model.py",
+    "src/rfq_agent/package.py",
+    "src/rfq_agent/planner.py",
+    "src/rfq_agent/pricing.py",
+    "src/rfq_agent/records.py",
+    "src/rfq_agent/resolution.py",
+    "src/rfq_agent/submission.py",
+    "tests/scenarios.py",
+    "tests/test_business_rules.py",
+    "tests/test_compliance.py",
+    "tests/test_debug_workflow.py",
+    "tests/test_investigation.py",
+    "tests/test_live_missions.py",
+    "tests/test_live_navigation.py",
+    "tests/test_loop.py",
+    "tests/test_mail.py",
+    "tests/test_missions.py",
+    "tests/test_regressions.py",
+    "tests/test_submission.py",
+    "uv.lock"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6.1-sol",
+  "turn_id": "70890db78b18",
+  "checkpoint_transcript_start": 230,
+  "transcript_lines_at_start": 230,
+  "compact_transcript_start": 28,
+  "token_usage": {
+    "input_tokens": 1142526,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 55903080,
+    "output_tokens": 225351,
+    "api_call_count": 417,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 32
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T20:37:25.375891Z",
+    "agent_lines": 3297,
+    "agent_removed": 624,
+    "human_added": 1135,
+    "human_modified": 59,
+    "human_removed": 0,
+    "total_committed": 4478,
+    "total_lines_changed": 5115,
+    "agent_percentage": 76.65689149560117,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1789,
+      "agent_lines_removed": 424
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 2,
+      "user_lines_removed": 2,
+      "agent_lines_added": 1865,
+      "agent_lines_removed": 431,
+      "user_added_per_file": {
+        "src/rfq_agent/investigation.py": 2
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/investigation.py": 2
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 2,
+      "user_lines_removed": 2,
+      "agent_lines_added": 1941,
+      "agent_lines_removed": 436,
+      "user_added_per_file": {
+        "src/rfq_agent/investigation.py": 2
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/investigation.py": 2
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2149,
+      "agent_lines_removed": 443
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2149,
+      "agent_lines_removed": 443
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2267,
+      "agent_lines_removed": 452
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2427,
+      "agent_lines_removed": 492
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2427,
+      "agent_lines_removed": 492
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2541,
+      "agent_lines_removed": 493
+    },
+    {
+      "checkpoint_number": 11,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2681,
+      "agent_lines_removed": 493
+    },
+    {
+      "checkpoint_number": 12,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2681,
+      "agent_lines_removed": 493
+    },
+    {
+      "checkpoint_number": 13,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2901,
+      "agent_lines_removed": 493
+    },
+    {
+      "checkpoint_number": 14,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2979,
+      "agent_lines_removed": 499
+    },
+    {
+      "checkpoint_number": 15,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2979,
+      "agent_lines_removed": 499
+    },
+    {
+      "checkpoint_number": 16,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3086,
+      "agent_lines_removed": 504
+    },
+    {
+      "checkpoint_number": 17,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3086,
+      "agent_lines_removed": 504
+    },
+    {
+      "checkpoint_number": 18,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3067,
+      "agent_lines_removed": 663
+    },
+    {
+      "checkpoint_number": 19,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3103,
+      "agent_lines_removed": 663
+    },
+    {
+      "checkpoint_number": 20,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3129,
+      "agent_lines_removed": 663
+    },
+    {
+      "checkpoint_number": 21,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3129,
+      "agent_lines_removed": 663
+    },
+    {
+      "checkpoint_number": 22,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3160,
+      "agent_lines_removed": 663
+    },
+    {
+      "checkpoint_number": 23,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 3160,
+      "agent_lines_removed": 663
+    },
+    {
+      "checkpoint_number": 24,
+      "user_lines_added": 91,
+      "user_lines_removed": 7,
+      "agent_lines_added": 3242,
+      "agent_lines_removed": 665,
+      "user_added_per_file": {
+        "src/rfq_agent/planner.py": 59,
+        "tests/test_live_navigation.py": 6,
+        "tests/test_regressions.py": 26
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/planner.py": 6,
+        "tests/test_live_navigation.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 25,
+      "user_lines_added": 6,
+      "user_lines_removed": 1,
+      "agent_lines_added": 3375,
+      "agent_lines_removed": 668,
+      "user_added_per_file": {
+        "tests/test_live_navigation.py": 6
+      },
+      "user_removed_per_file": {
+        "tests/test_live_navigation.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 26,
+      "user_lines_added": 6,
+      "user_lines_removed": 1,
+      "agent_lines_added": 3375,
+      "agent_lines_removed": 668,
+      "user_added_per_file": {
+        "tests/test_live_navigation.py": 6
+      },
+      "user_removed_per_file": {
+        "tests/test_live_navigation.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 27,
+      "user_lines_added": 6,
+      "user_lines_removed": 1,
+      "agent_lines_added": 3375,
+      "agent_lines_removed": 668,
+      "user_added_per_file": {
+        "tests/test_live_navigation.py": 6
+      },
+      "user_removed_per_file": {
+        "tests/test_live_navigation.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 28,
+      "user_lines_added": 713,
+      "user_lines_removed": 32,
+      "agent_lines_added": 3756,
+      "agent_lines_removed": 668,
+      "user_added_per_file": {
+        "README.md": 16,
+        "src/rfq_agent/__main__.py": 56,
+        "src/rfq_agent/loop.py": 47,
+        "src/rfq_agent/mail.py": 69,
+        "src/rfq_agent/missions.py": 191,
+        "src/rfq_agent/planner.py": 70,
+        "tests/test_live_missions.py": 74,
+        "tests/test_live_navigation.py": 6,
+        "tests/test_loop.py": 9,
+        "tests/test_mail.py": 19,
+        "tests/test_missions.py": 113,
+        "tests/test_regressions.py": 43
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/__main__.py": 4,
+        "src/rfq_agent/mail.py": 10,
+        "src/rfq_agent/planner.py": 11,
+        "tests/test_live_navigation.py": 1,
+        "tests/test_mail.py": 2,
+        "tests/test_regressions.py": 4
+      }
+    }
+  ]
+}
