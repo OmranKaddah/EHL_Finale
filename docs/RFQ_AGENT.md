@@ -21,7 +21,10 @@ uv pip install --python .venv/bin/python -e '.[test,rfq]'
 .venv/bin/rfq-agent --help
 ```
 
-The `rfq` extra adds httpx, Playwright, PyMuPDF and jsonschema. Importing the RFQ
+For local model credentials, copy `.env.example` to `.env` and put values such as
+`OPENAI_API_KEY=...` in `.env`. The agent loads `.env` automatically; git ignores it.
+
+The `rfq` extra adds httpx, Playwright, PyMuPDF, jsonschema and python-dotenv. Importing the RFQ
 calculator does not import browser/network dependencies. `requirements-rfq.txt` pins
 the runtime dependencies used by `agent.json`. Refresh intentionally with:
 
@@ -76,6 +79,12 @@ export CDP_URL=http://127.0.0.1:9222
 .venv/bin/rfq-agent
 ```
 
+For a local scout run, `--model gpt-6-luna` selects GPT-6 Luna for the coordinator,
+specialists and independent reviewer. Set `OPENAI_API_KEY` in `.env` or export it; the agent fails
+before opening browsers if it is missing or blank. GPT-6 Luna uses the OpenAI API,
+while public Atira test/scored runs continue to use their supplied Qwen/Clef proxy.
+The public rehearsal launcher does not forward a local OpenAI key.
+
 `--prepare-only` instructs the model not to enter a bid and ends the tool loop at the
 first successful calculation. Browser exploration still uses clicks and form fills;
 this is not a network-enforced read-only browsing mode.
@@ -123,6 +132,21 @@ run, the runtime instead fetches `/v1/runs/current` using `CHALLENGE_API_URL` an
 credentials, tender values or answers are embedded in the implementation or package.
 
 ## Packaging and rehearsals
+
+```bash
+scripts/rehearse_rfq.sh
+scripts/rehearse_rfq.sh --public
+```
+
+The first command starts four local Chrome windows and runs a full GPT-6 Luna scout
+rehearsal using `OPENAI_API_KEY` from `.env`. Pass `--prepare-only` to stop before
+submission. The second command rebuilds the allowlisted archive, starts a public
+Atira test run with the supplied Qwen/Clef proxy, and prints the run URL. The CLI
+opens the run page; the script does not follow or monitor the run. Pass
+`--public --no-open` to leave the page closed, or `--public --follow` to stream logs.
+
+To keep an extracted package for inspection or a later scored submission, use the
+manual steps:
 
 ```bash
 .venv/bin/python scripts/package_rfq.py

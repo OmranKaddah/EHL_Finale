@@ -22,7 +22,14 @@ local model weights, a search service, or an API server.
 
 See [the RFQ agent guide](docs/RFQ_AGENT.md) for local scouting, browser setup,
 runtime configuration, evidence handling, pricing rules and limitations.
-The runtime reads configuration from environment variables; `.env.example`
+Run `scripts/rehearse_rfq.sh` for a local GPT-6 Luna rehearsal against the Atira
+practice sites. Use `scripts/rehearse_rfq.sh --public` to package the agent and
+queue a public Atira test run using the supplied model proxy.
+For local scouting, `rfq-agent --model gpt-6-luna` uses `OPENAI_API_KEY` and fails
+early if the key is missing. Public Atira runs still use the supplied model proxy.
+The runtime reads configuration from environment variables and loads a local `.env`
+file automatically; copy `.env.example` to `.env` and add secrets such as
+`OPENAI_API_KEY` there. `.env` is ignored by git. `.env.example`
 contains local proxy defaults, and is not loaded automatically.
 
 The manifest requests four independently recorded browser windows. The coordinator uses
@@ -42,6 +49,9 @@ Clef suggestions are advisory. Confirmed CAPTCHA creates a human handoff
 in `run.json` and stops the affected investigation. Other research workers continue.
 Review and receipt validation must pass; only the platform verdict confirms eligibility.
 See the [current diagnosis](docs/RFQ_DIAGNOSIS.md) for observed failures and live-run evidence.
+
+The experimental branch includes a [paired browser-use navigation probe](docs/BROWSER_USE_EXPERIMENT.md)
+for comparing the existing loop against browser-use on generated stock lookups.
 
 ## Code
 
