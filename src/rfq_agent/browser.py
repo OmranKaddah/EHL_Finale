@@ -33,6 +33,8 @@ async def connect(playwright, number: int = 0):
         context = browser.contexts[0] if browser.contexts else await browser.new_context()
         owns_browser = False
     else:
+        if os.environ.get("CHALLENGE_RUN_TOKEN"):
+            raise RuntimeError("Run mode requires a platform-provided CDP browser")
         browser = await playwright.chromium.launch(headless=os.environ.get("HEADLESS") == "1")
         context = await browser.new_context()
         owns_browser = True

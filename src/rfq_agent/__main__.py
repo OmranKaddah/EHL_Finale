@@ -2,6 +2,8 @@
 
 import asyncio
 import sys
+import json
+from pathlib import Path
 
 from playwright.async_api import async_playwright
 
@@ -32,24 +34,28 @@ async def main() -> int:
             *(investigate(index, assignment) for index, assignment in enumerate(assignments)),
             return_exceptions=True,
         )
-    completed = sum(isinstance(result, dict) for result in results)
-    failed = len(results) - completed
+    completed = sum(isinstance(result, dict) and result["status"] == "completed" for result in results)
+    failed = sum(not isinstance(result, dict) or result["status"] == "failed" for result in results)
+    incomplete = len(results) - completed - failed
     for result in results:
         if isinstance(result, dict):
             print(
-                f"[{result['site_id']}] stopped after {result['steps']} steps; "
+                f"[{result['site_id']}] {result['status']} after {result['steps']} steps; "
                 f"evidence records={result['evidence_count']}; reason={result['stop_reason']}",
                 flush=True,
             )
         else:
             print(f"Investigator failed ({type(result).__name__})", flush=True)
-    evidence_count = len(await ledger.snapshot())
+    evidence = await ledger.snapshot()
+    Path("artifacts").mkdir(exist_ok=True)
+    Path("artifacts/evidence.json").write_text(json.dumps([item.to_dict() for item in evidence], ensure_ascii=False, indent=2))
+    evidence_count = len(evidence)
     print(
-        f"Exploration finished: {completed} investigators completed, {failed} failed; "
+        f"Exploration finished: {completed} investigators completed, {incomplete} incomplete, {failed} failed; "
         f"selected evidence records: {evidence_count}. No bid was submitted.",
         flush=True,
     )
-    return 0 if completed else 1
+    return 0 if completed == len(results) and evidence_count else 1
 
 
 if __name__ == "__main__":

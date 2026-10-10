@@ -280,3 +280,25 @@ so the reviewer can decide whether to run it.
 - Can retain source-quoted evidence without exposing credential values.
 - Stops predictably at its step limit or model-selected finish.
 - Does not claim to be a bid solver and never submits an incomplete bid.
+
+## Exploration reliability update
+
+The previous diagnosis sections describe earlier runs. Current exploration uses
+state-scoped repeat tracking, so returning to a login page after navigation does
+not block reauthentication. Observations expose disabled/read-only controls and
+slider gestures verify their resulting value. Workers retain recent navigation
+history, retry transient model errors, and report explicit completion statuses.
+
+`documents.py` reads only model-clicked downloads and model-selected archive
+members or frames. It supports PDF/text formats, bounded document paging, and
+new-tab links. No document links or archive contents are crawled automatically.
+The full evidence ledger is exported to `artifacts/evidence.json`; quotes are not
+truncated or evicted. Worker evidence counts use the investigator identity.
+
+Exploration is bounded by 120 actions, 18 minutes, and the platform deadline with
+90 seconds reserved. Run mode refuses to launch Chromium without supplied CDP.
+Synthetic browser and unit regression tests cover login recurrence, duplicate
+actions, disabled fields, slider outcomes, frame selection, downloaded documents,
+evidence retention, and transient model retries. These checks do not establish
+success against the live challenge websites. Bid resolution, pricing, validation,
+and signing remain unimplemented.

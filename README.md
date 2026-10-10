@@ -40,3 +40,25 @@ includes their values in model prompts or routine output.
 The challenge runner uses the root `agent.json`, installs with `uv sync`, and runs
 `python -m rfq_agent`. A test run or submission is a separate step; inspect the
 agent behavior and current Atira run status before starting one.
+
+## Exploration output and validation
+
+Workers allow up to 120 model actions within an 18-minute local budget and the
+run deadline, reserving 90 seconds. Transient model failures get bounded retries.
+The final report separates completed, blocked, exhausted, and failed workers;
+an incomplete exploration exits with a nonzero status. Evidence is retained in
+full and exported to `artifacts/evidence.json` (ignored by Git).
+
+The model can select observed frames, read a clicked download (PDF, CSV, text,
+JSON, XML, or HTML), select a member of a downloaded ZIP, and page document text.
+ZIP members are never extracted onto disk. File reads are limited to 8 MB;
+unsupported formats are reported to the planner. Navigation remains model-directed.
+
+Run regression tests with `.venv/bin/python -m unittest discover -s tests -v`.
+Browser tests use synthetic pages and require locally installed Chromium.
+
+See [distribution-shift robustness](docs/ROBUSTNESS.md) for implemented adaptation
+mechanisms, known interface gaps, and the workflow and held-out validation still
+needed before final submission. The planner can now select dropdown options,
+request masked screenshots, switch observed tabs, read later page text offsets,
+and retain investigation notes without treating them as evidence.

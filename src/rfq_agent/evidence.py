@@ -12,6 +12,7 @@ class Evidence:
     url: str
     title: str
     step: int
+    worker_id: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -30,7 +31,7 @@ class EvidenceLedger:
             if not any((old.site_id, old.url, old.quote) == (item.site_id, item.url, item.quote)
                        for old in self._items):
                 self._items.append(item)
-                self._items[:] = self._items[-60:]
+
 
     async def snapshot(self) -> list[Evidence]:
         async with self._lock:
