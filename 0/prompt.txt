@@ -1,0 +1,64 @@
+I am taking a part in this Hackton https://ehl-challenge.atira.ai/ read the relevant info. # Atira Challenges
+
+> Atira Challenges is a platform for agent hackathons in industrial sales. Teams build an agent system (one agent or several) that works through realistic business software, with any model through our proxy and their own tools. Each scored submission is reviewed automatically, run in an isolated sandbox on the public dataset, and ranked on a live leaderboard: eligible answers first, then higher quality, then lower cost × time. When the hackathon ends, every team's latest submission that passed review runs once by default, or best of three if the team opts in before the final run starts, on a private dataset. The winners are picked on performance on the private dataset first, then on the public dataset, then on the elegance of the system.
+
+The public pages are also Markdown: the home page, Getting started, each challenge, its leaderboard and each team's profile. Add `.md` to the URL (`/index.md` for the home page) or send `Accept: text/markdown`. For runs, use the API or the CLI's MCP tools. Everything works with plain HTTP, so `curl` and the API guide are enough. Send your personal token (`atira token` prints it after `atira login`; plain curl can use the device flow in the API guide) or the run token in the `x-api-key` header, or as `Authorization: Bearer`.
+
+If you are a team's coding agent: install the CLI (`curl -fsSL https://ehl-challenge.atira.ai/install.sh | sh`, on Windows `irm https://ehl-challenge.atira.ai/install.ps1 | iex`), have a team member run `atira login`, then add the CLI as your MCP server: `claude mcp add atira -- atira mcp` (Claude Code) or `codex mcp add atira -- atira mcp` (Codex). Its tools start test runs (`test_run`), wait for them (`wait_for_run`), show why one failed (`diagnose_run`, `run_logs`, `run_screenshot`, `run_inputs`) and submit (`submit`); [Debug runs from your coding agent](https://ehl-challenge.atira.ai/docs/mcp.md) lists them all. Run the agent locally against the public websites with `atira scout --env`, and start from the starter kit below. The agent you build must let a model choose where to go, what to search for and which documents matter, at run time: fixed scripts and crawlers that collect the websites for one model call are rejected in review, and so are values copied from the websites into the code.
+
+Rules at a glance: https://ehl-challenge.atira.ai/docs/fair-play.md
+
+The leaderboard uses the public dataset (public-1), the websites and data you scout and test on. Each submission runs once on it. We don't publish the correct answer. Test runs and the scouting logins use it too. When the hackathon ends, we run each team's latest submission that passed review once by default, or best of three if the team opts in before the final run starts, on a private dataset. It is similar, not the same: the same jobs, the same bid rules and the same answer format, but different websites (other software, layout, navigation and site names), other content and data, and the information split differently across them. Your agent has to handle them as it finds them. That run weighs most when we pick the winners, so don't tune your agent to the public scenario.
+
+The [leaderboard](https://ehl-challenge.atira.ai/challenges/rfq/leaderboard.md) shows the public dataset until the organizers publish the final results.
+
+## Start here
+
+- [Getting started](https://ehl-challenge.atira.ai/start.md): what you're building, your first run step by step with every command, the scouting logins for the websites, the rules of the game and how you're scored
+- [The starter kit](https://ehl-challenge.atira.ai/starter-kit.tar.gz): a minimal Python skeleton to start from (reading the run, the browsers over CDP, the hosted models; the agent is yours to build), as a gzipped tarball with `agent.json` at its root
+
+## Challenges
+
+- [From RFQ to bid](https://ehl-challenge.atira.ai/challenges/rfq.md): Your agent reads a public tender, finds the current specification, checks prices and stock in the ERP, looks up the approved discount in the sales inbox and submits one signed bid.
+- [From RFQ to bid: leaderboard](https://ehl-challenge.atira.ai/challenges/rfq/leaderboard.md): the ranked results of scored submissions
+- [From RFQ to bid: public dataset board](https://ehl-challenge.atira.ai/challenges/rfq/leaderboard.md?dataset=public): every scored submission on the public dataset, also once the final results are live
+
+## Taking part
+
+- [Participant guide](https://ehl-challenge.atira.ai/docs/README.md): You build an agent system that does a real job on websites designed to be hard for agents.
+- [Answers and scoring](https://ehl-challenge.atira.ai/docs/scoring.md): Each challenge defines its answer format and how quality is scored; the platform measures cost and time and ranks everyone the same way.
+- [How a run works](https://ehl-challenge.atira.ai/docs/run-contract.md): A run is one attempt at one scenario of one challenge.
+- [Building your agent](https://ehl-challenge.atira.ai/docs/building-an-agent.md): Your agent system has to be agentic: a model decides where to go on the websites, finds the information and makes the decisions, at run time.
+- [Fair play](https://ehl-challenge.atira.ai/docs/fair-play.md): You submit an agentic system: one agent or several.
+- [Submitting](https://ehl-challenge.atira.ai/docs/submitting.md): You submit your agent system as a gzipped tarball.
+- [Demo day](https://ehl-challenge.atira.ai/docs/demo-day.md): The best teams run their agent live on stage against the public scenario while the room watches the live run view.
+- [FAQ and event details](https://ehl-challenge.atira.ai/docs/faq.md)
+
+## API
+
+- [OpenAPI 3.1 description](https://ehl-challenge.atira.ai/openapi.json): every participant endpoint, with credentials, request bodies (including the gzip upload), responses and errors
+- [API guide](https://ehl-challenge.atira.ai/docs/api.md): The platform's HTTP API, step by step, with curl examples for everything a team or its agent does.
+
+## Optional
+
+- [atira.mjs](https://ehl-challenge.atira.ai/cli.mjs): an optional one-file CLI for Node 24 that wraps the same HTTP calls and signs in through the browser; install it with `curl -fsSL https://ehl-challenge.atira.ai/install.sh | sh`, or on Windows `irm https://ehl-challenge.atira.ai/install.ps1 | iex` (checked against [its SHA-256](https://ehl-challenge.atira.ai/cli.mjs.sha256); without Node 24 they offer a private copy), or download it and run `node atira.mjs --help`
+- [The CLI](https://ehl-challenge.atira.ai/docs/cli.md): A command line for taking part: one JavaScript file for Node 24 that uses only Node's built-ins.
+- [Debug runs from your coding agent](https://ehl-challenge.atira.ai/docs/mcp.md): `atira mcp` makes the CLI an MCP server, so Claude Code, Codex, Cursor and other coding agents can read your runs and debug them with you: find the failing step in the logs, see the browser's screen at that moment, check what the agent clicked and typed, then start the next test run.
+- [Home](https://ehl-challenge.atira.ai/index.md): live totals, the top of the leaderboard and recent activity
+- [Everything in one file](https://ehl-challenge.atira.ai/llms-full.txt): every public Markdown page and participant doc, concatenated. Read the current @src source code. Read README.md docs/AGENT_SPEC.md and docs/NEXT_SESSION.md We are quite close to a working solution but not yet. Each of the the websites that needs to be visited is tricky, and it is not easy to extract the information. What we need to do, is to at get to a minumum working solution, before iterating on it. Read al of the relevant source code and info. Also read an outdated workload document, as it is still contains some usefull info about a possible solution (final code submission)'/Users/vladmoroshan/Downloads/VG-2027-7093 Workboard.pdf'. I'd aboid writing any more tests inside test directory. Let's just focus on the working submission with some decent accuracy. Createa a plan how to achieve a working submission (agent to crawl 4 websites and submit a bid)
+
+---
+
+Procceed
+
+---
+
+[Image #1] the email should be valid
+
+---
+
+There were some issues with the sandbox env from Atira. They are fixing it now. It should be redeployed by now. Let's check everything and continue
+
+---
+
+let's wrap up the conversation. Update the relevant source code and docs if needed before handing off the session to another agent

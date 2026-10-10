@@ -1,0 +1,84 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4M1XWPAESHJXREW4BM7MF3Y",
+  "session_id": "01a126b2-2644-74e0-b348-e27a3baeec42",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T23:21:26.210362Z",
+  "branch": "vlad",
+  "checkpoints_count": 2,
+  "save_step_count": 2,
+  "files_touched": [
+    "README.md",
+    "docs/AGENT_SPEC.md",
+    "docs/MVP_PLAN.md",
+    "docs/NEXT_SESSION.md",
+    "src/rfq_agent/__main__.py",
+    "src/rfq_agent/eligibility.py",
+    "src/rfq_agent/loop.py",
+    "src/rfq_agent/planner.py",
+    "src/rfq_agent/submission.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-astra",
+  "turn_id": "585cb360a6fb",
+  "checkpoint_transcript_start": 5216,
+  "transcript_lines_at_start": 5216,
+  "compact_transcript_start": 670,
+  "token_usage": {
+    "input_tokens": 781498,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 31747180,
+    "output_tokens": 74127,
+    "api_call_count": 198,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 39
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T23:21:25.502718Z",
+    "agent_lines": 304,
+    "agent_removed": 1,
+    "human_added": 294,
+    "human_modified": 45,
+    "human_removed": 0,
+    "total_committed": 643,
+    "total_lines_changed": 644,
+    "agent_percentage": 47.36024844720497,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 339,
+      "user_lines_removed": 45,
+      "agent_lines_added": 293,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "README.md": 6,
+        "docs/AGENT_SPEC.md": 10,
+        "docs/NEXT_SESSION.md": 75,
+        "src/rfq_agent/__main__.py": 20,
+        "src/rfq_agent/eligibility.py": 5,
+        "src/rfq_agent/loop.py": 8,
+        "src/rfq_agent/planner.py": 21,
+        "src/rfq_agent/submission.py": 194
+      },
+      "user_removed_per_file": {
+        "README.md": 3,
+        "docs/AGENT_SPEC.md": 4,
+        "src/rfq_agent/__main__.py": 9,
+        "src/rfq_agent/eligibility.py": 2,
+        "src/rfq_agent/planner.py": 17,
+        "src/rfq_agent/submission.py": 10
+      }
+    }
+  ]
+}
