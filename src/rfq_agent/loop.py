@@ -84,14 +84,15 @@ class BrowserLoop:
                 self.site_id = current['site_id']
             from playwright.async_api import Error as BrowserError
             try:
-                observation = await asyncio.wait_for(self.session.observe(self.site_id), self.budget())
-            except BrowserError:
+                observation = await asyncio.wait_for(self.session.observe(self.site_id), min(30, self.budget()))
+            except (BrowserError, TimeoutError):
                 if self.session.page.is_closed() or self.budget() <= 1:
                     raise
                 # Navigation can replace the execution context between DOM reads.
                 # Retry observation once; never reuse targets from the failed read.
+                print(f'[{self.phase}] page observation delayed; retrying the current page once', flush=True)
                 await asyncio.sleep(0.25)
-                observation = await asyncio.wait_for(self.session.observe(self.site_id), self.budget())
+                observation = await asyncio.wait_for(self.session.observe(self.site_id), min(30, self.budget()))
             if os.environ.get('RFQ_TRACE_DIR'):
                 # Opt-in local diagnostics use the same credential-redacted UI
                 # observation seen by the model, never hidden site state.
@@ -137,4 +138,4 @@ class BrowserLoop:
                     'Choose an available action and target, with all required fields. Do not repeat unavailable actions.'})
 
     async def apply(self, action, site_id=None):
-        return await asyncio.wait_for(self.session.apply(action, site_id or self.site_id), self.budget())
+        return await asyncio.wait_for(self.session.apply(action, site_id or self.site_id), min(45, self.budget()))

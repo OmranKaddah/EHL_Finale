@@ -15,6 +15,17 @@ from .run_contract import seconds_left
 from .loop import BrowserLoop, MissionProgress
 from . import mail, model
 from .evidence import EvidenceLedger
+from jsonschema import validate, ValidationError
+
+
+def validate_identity_value(item):
+    """Check basic value shape; identifier formats belong to the runtime form."""
+    value = item['value']
+    if not value or value != value.strip():
+        raise Unresolved('identity value must exclude surrounding whitespace')
+    if item.get('kind') == 'contact_email':
+        if not re.fullmatch(r'[^@\s:]+@[^@\s:]+\.[^@\s:.]+', value):
+            raise Unresolved('contact email must contain only a syntactically valid address')
 
 
 async def bidder_identity(task, sources=()):
@@ -22,34 +33,49 @@ async def bidder_identity(task, sources=()):
     source_texts = [{'text': task['brief']}] + [
         {'text': source['quote'], 'url': source['url']} for source in sources]
     fields = {'meaning': {'type': 'string'}, 'value': {'type': 'string'},
+              'kind': {'type': 'string', 'enum': ['company', 'tax_identifier', 'contact_email', 'other']},
               'source_index': {'type': 'integer', 'enum': list(range(len(source_texts)))}}
     schema = {'type': 'object', 'properties': {'fields': {'type': 'array', 'items': {
         'type': 'object', 'properties': fields, 'required': list(fields),
         'additionalProperties': False}}}, 'required': ['fields'], 'additionalProperties': False}
-    result = parse_json(await model.complete_with_retry([
+    messages = [
         {'role': 'system', 'content':
          'Extract the REGISTERED BIDDER identity from the runtime brief and selected source evidence: company, '
          'tax/registration identifier and any supplied bidder address/contact fields. '
          'Do not extract buyer identity, currency, tender numbers, prices, rules or '
          'website login credentials. For each field give its business meaning in '
          'English, the exact value and the index of its supporting source. '
-         'The value must be copied exactly from that source text. '
+         'The value must be copied exactly from that source text, excluding field labels, '
+         'descriptive prefixes and sentence punctuation. Give kind: company, tax_identifier, '
+         'contact_email or other. Preserve identifier formatting exactly as supplied; '
+         'email values contain only the address, not its surrounding sentence. '
          'A signed-in bidder account address is a contact detail, not its login secret. Missing '
-         'fields are omitted, never guessed. Return {fields:[{meaning,value,source_index}]}.'},
+         'fields are omitted, never guessed. Return {fields:[{meaning,kind,value,source_index}]}.'},
         {'role': 'user', 'content': json.dumps({'sources': [dict(item, source_index=i)
          for i, item in enumerate(source_texts)]}, ensure_ascii=False)},
-    ], timeout=60, budget=lambda: seconds_left(task) - 60,
-        phase='bidder-identity', response_schema=schema))
-    for item in result['fields']:
-        source = source_texts[item.pop('source_index')]
-        if not item['value'] or item['value'] not in source['text']:
-            raise Unresolved('bidder identity lacks verbatim runtime support')
-        # Retain the actual source; asking the model to transcribe a second
-        # quote introduced avoidable newline/paraphrase mismatches.
-        item['quote'] = source['text']
-        if source.get('url'):
-            item['source_url'] = source['url']
-    return result['fields']
+    ]
+    for attempt in range(2):
+        result = parse_json(await model.complete_with_retry(messages, timeout=60,
+            budget=lambda: seconds_left(task) - 60, phase='bidder-identity', response_schema=schema))
+        try:
+            validate(result, schema)
+            for item in result['fields']:
+                validate_identity_value(item)
+                source = source_texts[item['source_index']]
+                if item['value'] not in source['text']:
+                    raise Unresolved('bidder identity lacks verbatim runtime support')
+                item['quote'] = source['text']
+                if source.get('url'):
+                    item['source_url'] = source['url']
+            for item in result['fields']:
+                item.pop('source_index')
+            return result['fields']
+        except (Unresolved, ValidationError) as exc:
+            if attempt:
+                raise Unresolved('bidder identity extraction failed value/source validation') from exc
+            messages.append({'role': 'user', 'content':
+                'Re-extract from the same sources. Validation failed: ' + str(exc)[:200] +
+                '. Return field VALUES only, not labels or complete sentences. Do not invent replacements.'})
 
 
 async def find_identity(task, session, site, field, identity):
@@ -331,6 +357,10 @@ explicitly omit every supplied identifier in the wizard, not that work is done.
 Source documents are not bid review screens. While outside the configurator,
 choose navigation rather than attempting to verify the expected answer. Return
 from a document frame to its parent when its controls cannot reach the wizard.
+Identify the current business stage from the LIVE screen, not the URL or an
+assumed step sequence. Return {stage,decision}, with stage one of access,
+registration, offer, positions, review, signing, receipt or navigation.
+Use the last observed stage goal as context; change stage when the screen changes.
 One JSON action per turn. No prices inferred,
 no arbitrary hosts, no API bypass for a site submission.
 Actions include usual browser actions plus:
@@ -347,6 +377,17 @@ For registered bidder details absent from the answer, use
 {action:'fill_brief',target,value,quote}. Quote the runtime brief containing the
 exact value; never invent bidder details or enter a signing code with fill_brief.
 """
+
+STAGE_GOALS = {
+    'access': 'Complete only the observed authentication, consent or document-access prerequisites.',
+    'registration': 'Correct every required bidder field from retained identity, inspect errors, and advance the registration form. Do not leave it to investigate tender documents.',
+    'offer': 'Choose the offer decision and declarations that match the validated answer, then advance.',
+    'positions': 'Enter the validated line or explicit omission for the currently displayed position, verify it, and advance.',
+    'review': 'Read the actual final summary, correct discrepancies, and verify its values and explicit omissions.',
+    'signing': 'Use the verified review, one signing request, a newer original code and the final binding confirmation.',
+    'receipt': 'Observe the accepted signed receipt and confirm its identifier and tender reference.',
+    'navigation': 'Find the runtime submission configurator through observed controls. Do not reopen source investigations.',
+}
 
 
 async def submit_on_site(task, answer, omitted, page, ledger, max_steps=120):
@@ -380,7 +421,9 @@ async def submit_on_site(task, answer, omitted, page, ledger, max_steps=120):
 
 def submission_schema(observation, sites, state, signing, attempted=None, identity=(), submission_site=None):
     """Offer observed browser controls and explicit, validated submission fields."""
-    base = planner.decision_schema(observation, sites, {}, attempted_targets=attempted)
+    starting_site = submission_site or sites[0]
+    base = planner.decision_schema(observation, sites, {'site_id': starting_site['site_id']},
+                                   attempted_targets=attempted)
     branches = []
     def branch(kind, **fields):
         properties = dict(action={'type': 'string', 'enum': [kind]}, **fields)
@@ -469,8 +512,10 @@ def submission_schema(observation, sites, state, signing, attempted=None, identi
                                    omission_quotes=quotes(state.omitted), field_quotes=quotes(scalar_paths(state.answer))))
         if signing.requested_at is not None:
             branches.append(branch('retrieve_tan'))
-    return {'type': 'object', 'properties': {'decision': {'anyOf': branches}},
-            'required': ['decision'], 'additionalProperties': False}
+    return {'type': 'object', 'properties': {
+            'stage': {'type': 'string', 'enum': list(STAGE_GOALS)},
+            'decision': {'anyOf': branches}},
+            'required': ['stage', 'decision'], 'additionalProperties': False}
 
 
 async def review_field_entry(loop, task, answer, action, target, value):
@@ -516,6 +561,7 @@ async def _submit_on_site(task, answer, omitted, page, ledger, signing, max_step
     progress = MissionProgress()
     last_error = None
     invalid_decisions = 0
+    stage = 'navigation'
     identity = task['registered_bidder_identity']
     loop = BrowserLoop(session, sites, lambda: seconds_left(task) - 5, 'submission', timeout=60, site_id=site['site_id'])
     async for step, sid, observation in loop.turns(max_steps):
@@ -553,6 +599,7 @@ async def _submit_on_site(task, answer, omitted, page, ledger, signing, max_step
                    'registered_bidder_identity': [dict(item, identity_index=i) for i, item in enumerate(identity)],
                    'validated_scalar_fields': {path: answer_value(answer, path) for path in scalar_paths(answer)},
                    'submission_target': {'site_id': site['site_id'], 'url': target},
+                   'previous_business_stage': stage, 'stage_goal': STAGE_GOALS[stage],
                    'observation': observation, 'last_result': result, 'history': history[-12:],
                    'review_verified': state.reviewed, 'tan_captured': state.tan is not None,
                    'entered_answer_paths': sorted(state.filled_paths),
@@ -564,12 +611,16 @@ async def _submit_on_site(task, answer, omitted, page, ledger, signing, max_step
         content = json.dumps(payload, ensure_ascii=False)
         entry = None
         try:
-            action = parse_json(await loop.decide(SUBMISSION_PROMPT, content, observation,
-                               submission_schema(observation, sites, state, signing, progress.attempted, identity, site)))['decision']
+            choice = parse_json(await loop.decide(SUBMISSION_PROMPT, content, observation,
+                               submission_schema(observation, sites, state, signing, progress.attempted, identity, site)))
+            if choice['stage'] != stage:
+                stage = choice['stage']
+                print(f'[submission] stage: {stage}', flush=True)
+            action = choice['decision']
             invalid_decisions = 0
             kind = action.get('action')
             chosen = next((item for item in observation['targets'] if item['id'] == action.get('target')), {})
-            entry = {'step': step, 'action': kind, 'url': observation['url'],
+            entry = {'step': step, 'action': kind, 'stage': stage, 'url': observation['url'],
                      'target_label': planner._safe_log_excerpt(chosen.get('label') or chosen.get('text', ''), sites, 100),
                      'purpose': action.get('purpose')}
             if kind == 'open_site':
@@ -624,6 +675,7 @@ async def _submit_on_site(task, answer, omitted, page, ledger, signing, max_step
                 if sid != site['site_id']:
                     raise Unresolved('bidder details must be entered on the runtime submission site')
                 item = identity[action['identity_index']]
+                validate_identity_value(item)
                 value = item['value']
                 await review_field_entry(loop, task, answer,
                                          dict(action, identity_source=item), chosen, value)

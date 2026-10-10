@@ -30,7 +30,7 @@ class InvestigationState:
                 'coverage': self.bundle['coverage'] if self.bundle else [],
                 'scenario': self.bundle['scenario'] if self.bundle else {}}
 
-    async def call(self, task, system, payload, reserve=300, phase="coordinator"):
+    async def call(self, task, system, payload, reserve=480, phase="coordinator"):
         budget = lambda: seconds_left(task) - reserve
         for attempt in range(2):
             raw = await model.complete_with_retry([
@@ -46,7 +46,6 @@ class InvestigationState:
     async def review(self, task, ledger):
         evidence = await ledger.snapshot()
         self.round += 1
-        self.answer = self.calculation = self.audit = None
         payload = {'brief': task['brief'], 'answer_schema': task.get('answer_schema'),
                    'checklist': self.checklist, 'selected_evidence': [item.to_dict() for item in evidence],
                    'previous_bundle': self.bundle}
@@ -68,14 +67,14 @@ class InvestigationState:
                     {'brief': task['brief'], 'bundle': bundle, 'sources': payload['selected_evidence']})
                 if audit.get('accepted') is not True or audit.get('issues') != []:
                     raise Unresolved('source audit: ' + json.dumps(audit.get('issues', ['invalid audit']), ensure_ascii=False))
-                self.bundle = bundle; self.audit = audit
+                self.bundle = bundle
                 self.gaps = [str(item) for item in bundle.get('gaps', [])]
                 resolved = Resolver(bundle).resolve()
                 calculation = calculate(resolved)
                 answer = validate_answer(calculation, task.get('answer_schema'), [item['id'] for item in resolved['positions']])
                 if bundle.get('gaps'):
                     raise Unresolved('source normalization still declares business evidence gaps: ' + '; '.join(str(item) for item in bundle['gaps']))
-                self.calculation = calculation; self.answer = answer
+                self.calculation = calculation; self.answer = answer; self.audit = audit
                 self.gaps += calculation['gaps']
                 return
             except (Unresolved, KeyError, TypeError, ValueError) as exc:

@@ -173,7 +173,7 @@ def _calculate(resolved):
             final += (setup + carton_cost - item['bonus']) / quantity
             if final < 0: raise Unresolved('calculated negative final price')
             result['positions'].append({'position': pid, 'material_number': material['number'], 'quantity': quantity,
-                                       'base_unit_price': item['base'], 'surcharge_per_unit': cents(surcharge),
+                                       'base_unit_price': item['base'], 'surcharge_per_unit': cents(surcharge + setup / quantity),
                                        'packaging_per_unit': cents(carton_cost / quantity), 'rebate_total': item['bonus'],
                                        'unit_price': cents(final), 'lead_time_weeks': weeks})
         except (Unresolved, KeyError, TypeError) as exc:

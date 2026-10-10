@@ -41,5 +41,6 @@ def validate_answer(calculation, schema, tender_ids):
     for item in answer['positions']:
         if item['quantity'] <= 0: raise Unresolved('bid quantity must be positive')
         for field in ('unit_price', 'base_unit_price', 'surcharge_per_unit', 'packaging_per_unit', 'rebate_total'):
-            if item[field] != cents(item[field]): raise Unresolved(f'{field} must be rounded to cents')
+            if field in item and Decimal(str(item[field])) != cents(Decimal(str(item[field]))):
+                raise Unresolved(f'{field} must be rounded to cents')
     return submitted

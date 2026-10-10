@@ -1,5 +1,142 @@
 # Next-session handoff: finish the minimum signed bid
 
+## Latest user-authorized Qwen test
+
+The user explicitly requested a new Qwen test after the stop instruction below.
+Nano run `run_832db929e6cc1747` was canceled as part of the switch.
+New full-workflow test: https://ehl-challenge.atira.ai/runs/run_3420e9da894fc81b
+Rehearsal `reh_0efe5e84a0f7faeb`; follower session `81030`.
+Staging: `/private/tmp/rfq-qwen-latest-test-s8kkaf7m`.
+The staged manifest selects `RFQ_MODEL_PROVIDER=qwen`, `models: ["qwen"]`,
+and four browsers. Root manifest remains nano. Includes the latest identity
+change removing the restrictive tax-identifier regex. Queued; no result yet.
+Metadata: `artifacts/qwen-latest-test/run.json`. No scored publication.
+
+## Stopped at the user’s request
+
+The user interrupted the diagnostic cycle because it was not converging. Do not
+start another diagnostic automatically. The last test, run_588d6cf3411fe5d4, has
+been canceled. No signed receipt or eligible result was established for our code.
+The teammate’s 37.4/100 eligible result remains the only demonstrated submission
+success discussed in this session.
+
+Root manifest selects nano/low. Source changes and existing work are preserved.
+The latest test switched away from its assigned website and then spent over two
+minutes awaiting a screenshot-assisted model response. This is observed behavior;
+it does not prove a browser-read hang. Browser and screenshot timeout changes
+are defensive bounds, not demonstrated fixes for the pending model request.
+The root code’s later single-site eligibility scope and review-error handling
+were not exercised by that uploaded package. No more tests should be started
+until there is one concrete, bounded next objective and a clear stopping criterion.
+
+See TEAMMATE_REVIEW.md for findings. Compilation and inline checks passed earlier;
+there is no verified end-to-end success. No scored submission was published.
+
+## Latest: nano diagnostics and teammate comparison — 11 October 2026
+
+This section supersedes the older active-run/Qwen instructions below.
+
+The user requested OpenAI nano because Qwen stalled, and supplied a teammate's
+eligible 37.4/100 result plus `/Users/vladmoroshan/Downloads/Adira-run_f05251da9da4734c`.
+Read [TEAMMATE_REVIEW.md](TEAMMATE_REVIEW.md) for the code comparison, score limits,
+reusable design choices and techniques we did not copy. The result does not prove
+our implementation is superior: ours still has no confirmed eligible receipt.
+
+Root `agent.json` now explicitly runs OpenAI `gpt-5-nano`, low reasoning, through
+Atira's metering proxy, with `models: []` and four provided browsers. It retains the
+full workflow. Minimum diagnostics use an isolated allowlisted staging directory
+whose manifest adds `--eligibility --steps 120`. Keys/docs/artifacts/tests are excluded.
+No scored publication is authorized. No new tests under tests/.
+
+Completed prior runs:
+
+- `run_7e7a499f1661e8ab`: FAILED, quality 0, ineligible, about 858 seconds,
+  $0.404150. Passed document enrollment/position extraction, but registration
+  used a tax value containing its label/punctuation and drifted into source
+  investigation. No signing request or receipt established. Final details and
+  logs are in `artifacts/platform-diagnostic-v2`.
+- `run_7860d8afb31bf526`: CANCELED at the user's replacement request, quality 0,
+  ineligible; about 533 seconds, $0.024731. Qwen reached a tender gate then stalled.
+  Final details and logs are in `artifacts/qwen-full-test`.
+- `run_7669def35e483af7`: CANCELED after a login click timeout and no further
+  actions, four completed model calls, about 165 seconds, $0.001340. This first
+  nano package predates bounded browser/screenshot reads and business-stage goals.
+  Final details/logs/package metadata are in `artifacts/nano-minimum`.
+
+Current diagnostic:
+
+- https://ehl-challenge.atira.ai/runs/run_588d6cf3411fe5d4
+- Rehearsal `reh_19ee08e880d1f4df`; follower session `33405`.
+- Staging `/private/tmp/rfq-nano-minimum-v2-20261011-013848`.
+- Archive `dist/nano-diagnostic-v2.tar.gz`; package/details/logs in
+  `artifacts/nano-minimum-v2`.
+- Package includes typed identity, model-reported business stage, bounded page
+  observation/action execution and blank-page submission-schema fixes.
+- Latest observed behavior: login username, screenshot request, unexpectedly
+  switched to another runtime website, screenshot request, then model latency
+  over 60 seconds. Do not call it fixed or eligible. Monitor before duplicating.
+- Root changes AFTER this package: eligibility position-list task now has only
+  the runtime submission website in access; screenshots have an outer 15-second
+  deadline; failed review transport preserves the prior candidate; full-workflow
+  coordinator reserves eight minutes for submission. A running process does not
+  acquire these changes. Rebuild before a subsequent diagnostic.
+
+Other changes retained:
+
+- Identity extraction returns typed bare values; tax/email syntax and exact source
+  substring checked, with one bounded re-extraction. Missing contacts still require
+  a model-selected authenticated bidder source. No generated contact addresses.
+- Model-reported business stages use generic English goals, no fixed URLs/labels.
+- Observation timeout 30 seconds, one reread; action timeout 45 seconds. Browser
+  failures are not model failures; diagnose the actual awaited operation.
+- Optional absent price breakdowns accepted by answer validation; setup costs now
+  appear in surcharge_per_unit as well as final unit price.
+- Failed later normalization preserves the prior validated answer. Full workflow
+  may use a permission/coverage-audited all-omitted fallback if no commercial
+  candidate exists. Unknown facts still cannot become guessed material/prices.
+- Initial assignment prompt respects technical/quantity dependencies before exact
+  material and price-scale selection. Site allocation remains model-selected.
+
+Compilation, diff checks and inline identity, price-unit/setup, optional breakdown,
+and submission-schema checks passed. No new files in tests/. One inline blank-page
+schema check exposed an existing missing site_id bug, which was corrected and
+rechecked. Do not infer live reliability from these checks.
+
+Next: establish a real minimum signed receipt, then add one fully supported offered
+line. Verify TAN freshness separately from discount approval. Unverified bottlenecks
+remain: translated review decision/currency labels, actual omission confirmation,
+review-state invalidation after back/reset, and incomplete technical/commercial
+coverage. The teammate's guessed closest-material/status-active fallbacks should
+not be adopted as accuracy fixes.
+
+## Qwen full-workflow test — latest session
+
+At the user's explicit request, root `agent.json` now runs
+`env RFQ_MODEL_PROVIDER=qwen uv run --no-sync python -m rfq_agent`, with
+`models: ["qwen"]` and four supplied browsers. The normal full workflow is kept;
+this test does not use `--eligibility`. Local provider defaults are unchanged.
+The package was built through `package.py`, unpacked into an isolated staging
+folder, dry-run checked, and uploaded with:
+
+```sh
+atira test-run /private/tmp/rfq-qwen-full-test-20261011-012415 --challenge rfq --follow --no-open
+```
+
+- Run: https://ehl-challenge.atira.ai/runs/run_7860d8afb31bf526
+- Rehearsal: `reh_36a767b6efb39b11`
+- Artifact metadata: `artifacts/qwen-full-test/package.json` and `run.json`
+- CLI follower tool session: `5539`
+- Upload: 22 runtime/manifests files, ~107 KB. No keys, artifacts, docs or tests.
+- Manifest requests Qwen warm-up; platform confirmed models warm and started it.
+- Result is pending; no accepted bid or eligibility is implied.
+
+The previous mini/medium minimum-bid diagnostic `run_7e7a499f1661e8ab` was still
+running when this new, explicitly requested full-workflow test started. Its logs
+show a malformed VAT identity including its label/punctuation, followed by repeated
+registration attempts. That extraction/entry issue is not fixed by the provider
+switch. Monitor the two results separately; do not start duplicate runs.
+No scored publication has been authorized.
+
 ## Resume here — session wrapped at the user's request
 
 **A diagnostic run is still active. Do not start a duplicate.**

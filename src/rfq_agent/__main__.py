@@ -64,6 +64,15 @@ async def run_batch(task, sessions, assignments, ledger, parallel=False):
     return results
 
 
+async def review_available_evidence(task, state, ledger):
+    """A failed model review must not discard the previously validated candidate."""
+    try:
+        await state.review(task, ledger)
+    except Exception as exc:
+        state.gaps = list(dict.fromkeys(state.gaps + [f'evidence review failed ({type(exc).__name__})']))
+        print(f'Evidence review failed ({type(exc).__name__}); retaining prior validated candidate and source evidence', flush=True)
+
+
 async def investigate_site(task, site, steps, goal=None):
     """An isolated debug run stops at source evidence; it never submits a bid."""
     task = dict(task, access=[{'siteId': site['site_id'], 'url': site['url'], 'credentials': site['_credentials']}], investigation_reserve=30, single_site_debug=True)
@@ -204,7 +213,7 @@ async def main(options=None) -> int:
                     phase = "evidence normalization and audit"
                     print(f"Reviewing evidence; remaining time={run_contract.seconds_left(task):.0f}s", flush=True)
                     if await ledger.snapshot():
-                        await state.review(task, ledger)
+                        await review_available_evidence(task, state, ledger)
                     else:
                         state.gaps = list(dict.fromkeys(state.gaps + ['No source evidence collected; recover browser access before normalization']))
                     write_artifact('evidence.json', [item.to_dict() for item in await ledger.snapshot()])
@@ -219,7 +228,21 @@ async def main(options=None) -> int:
                         print(f'Follow-up dispatch rejected ({type(exc).__name__}); retaining prior model-assigned objectives', flush=True)
                 if state.answer is None and await ledger.snapshot() and run_contract.seconds_left(task) > 310:
                     phase = "evidence normalization and audit"
-                    await state.review(task, ledger)
+                    await review_available_evidence(task, state, ledger)
+                if state.answer is None and await ledger.snapshot() and run_contract.seconds_left(task) > 300:
+                    phase = "minimum bid fallback"
+                    diagnostics = []
+                    try:
+                        answer, omitted = await omitted_bid(task, ledger, diagnostics=diagnostics)
+                        state.answer = answer
+                        state.calculation = {'answer': answer, 'omitted': omitted,
+                                             'gaps': state.gaps, 'fallback': 'validated_all_omitted'}
+                        print('Commercial evidence incomplete; attempting the runtime-permitted minimum bid', flush=True)
+                    except Unresolved as exc:
+                        print('Minimum bid fallback lacks validated permission or position coverage', flush=True)
+                        diagnostics.append({'phase': 'refusal', 'reason': str(exc)[:500]})
+                    finally:
+                        write_artifact('minimum-fallback.json', diagnostics)
                 if state.answer:
                     write_artifact('answer.json', state.answer)
                     write_artifact('calculation.json', state.calculation)
@@ -269,7 +292,9 @@ async def eligibility_rehearsal(task, sites, max_steps):
         async with async_playwright() as pw:
             instance, page, owns = await browser.connect(pw, 0)
             try:
-                focused_task = dict(task, investigation_reserve=420)
+                focused_task = dict(task, investigation_reserve=420,
+                    access=[{'siteId': site['site_id'], 'url': site['url'],
+                             'credentials': planner._credential_values(site)}])
                 assignment = {'site_id': site['site_id'], 'worker_id': 'eligibility',
                               'review_completion': True,
                               'objective': 'Find the tender matching the runtime brief on the submission website. '

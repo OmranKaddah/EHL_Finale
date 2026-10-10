@@ -212,7 +212,14 @@ independent starting investigation to each available worker. Select distinct sit
 values from the supplied list. Give each worker a specific evidence goal justified
 by the brief. Do not prescribe clicks, URLs below the site's entry URL, or a fixed
 sequence: each worker's planner will decide those from live observations. Do not
-ask workers to collect every page. Return JSON only: {"assignments":[{"site_id":"...",
+ask workers to collect every page. Respect business dependencies: exact material
+selection needs the governing specification and scoped technical amendments;
+price-scale selection needs the final quantity in pieces. Before those facts are
+known, an ERP/catalogue objective may establish access and available search fields,
+but must not guess a matching material from the tender title. Prioritize the
+complete tender position identifiers early so unfinished lines can be omitted.
+The model chooses which runtime sites establish these dependencies; facts may
+have moved between sites. Return JSON only: {"assignments":[{"site_id":"...",
 "objective":"..."}]}."""
 
 ACTION_SCHEMA = {
@@ -323,13 +330,14 @@ def _has_visual_challenge(observation: dict) -> bool:
 
 async def _visual_challenge_screenshot(page) -> str | None:
     """Return a low-detail, masked screenshot for a model-selected gate action."""
+    import asyncio
     try:
-        image = await page.screenshot(
+        image = await asyncio.wait_for(page.screenshot(
             type="jpeg",
             quality=85,
             timeout=10_000,
             mask=[page.locator("input[type='password'], input[autocomplete='username'], input[autocomplete='current-password']")],
-        )
+        ), timeout=15)
     except Exception:
         return None
     return "data:image/jpeg;base64," + b64encode(image).decode("ascii")

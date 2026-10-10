@@ -87,8 +87,10 @@ variables take precedence). Override with `OPENAI_MODEL`; GPT-5 calls use
 `OPENAI_REASONING_EFFORT=low` by default. In sandbox runs, calls use Atira's
 `LLM_PROXY_URL/openai/v1` and the `OPENAI_API_KEY` team secret. Never upload `.env`.
 Sandbox runs attach only to provided CDP browsers. To use hosted Qwen locally,
-start `atira models proxy` and set `RFQ_MODEL_PROVIDER=qwen`; for Qwen submissions,
-also set `agent.json`'s `models` to `["qwen"]` to request its warm-up.
+start `atira models proxy` and set `RFQ_MODEL_PROVIDER=qwen`. The current
+`agent.json` explicitly selects OpenAI `gpt-5-nano`, low reasoning, for the full
+workflow, with `models: []` so it does not wait for hosted Qwen. Local CLI calls still use their own
+environment/provider configuration.
 
 ## Validation and artifacts
 
@@ -136,6 +138,12 @@ This writes `dist/agent.tar.gz` containing only runtime Python files, `agent.jso
 `pyproject.toml` and `uv.lock`. It excludes local keys, artifacts, documentation,
 tests and caches, and checks the compressed size limit. See the
 [guidelines audit](docs/COMPLIANCE.md) for findings and remaining validation.
+
+To run a diagnostic test, unpack that allowlisted archive into a new staging
+directory, then use `atira test-run <staging-directory> --challenge rfq --follow
+--no-open`. This uploads the staged package and runs it on Atira's public sandbox.
+The canceled Qwen test and subsequent nano diagnostics are tracked in
+[NEXT_SESSION.md](docs/NEXT_SESSION.md).
 
 `rfq_agent.mail` provides `latest_tan_number(page, access)` and
 `get_tan(page, access, after=None, timeout_s=90)` for an already supplied browser
