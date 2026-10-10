@@ -8,6 +8,22 @@ from rfq_agent.evidence import Evidence, EvidenceLedger
 
 
 class DebugWorkflow(unittest.IsolatedAsyncioTestCase):
+    async def test_browser_failure_preserves_history_and_diagnostic(self):
+        site = {'site_id': 'shifted', 'url': 'https://example.test', '_credentials': {}, 'credential_keys': []}
+        async def fail(task, page, assignment, ledger, **kwargs):
+            kwargs['session'].history.append({'step': 1, 'action': 'scroll'})
+            raise RuntimeError('Selected frame was detached')
+        manager = MagicMock(); manager.__aenter__ = AsyncMock(); manager.__aexit__ = AsyncMock(return_value=False)
+        artifacts = {}
+        with patch.object(workflow, 'async_playwright', return_value=manager), patch.object(
+            workflow.browser, 'connect', return_value=(AsyncMock(), MagicMock(), True)), patch.object(
+            planner, 'run_planner', side_effect=fail), patch.object(workflow, 'write_artifact',
+            side_effect=lambda name, value: artifacts.update({name: value})):
+            self.assertEqual(await workflow.investigate_site({}, site, 7, 'Read a source'), 1)
+        result = artifacts['sites/shifted/workflow.json']
+        self.assertEqual(result['investigations'][0]['history'][0]['action'], 'scroll')
+        self.assertIn('detached', result['failure']['detail'])
+
     async def test_default_batch_is_sequential_and_parallel_is_explicit(self):
         active = 0; peak = 0
         async def investigate(*args, **kwargs):

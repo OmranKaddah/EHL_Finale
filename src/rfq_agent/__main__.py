@@ -62,7 +62,7 @@ async def run_batch(task, sessions, assignments, ledger, parallel=False):
 
 async def investigate_site(task, site, steps, goal=None):
     """An isolated debug run stops at source evidence; it never submits a bid."""
-    task = dict(task, access=[{'siteId': site['site_id'], 'url': site['url'], 'credentials': site['_credentials']}], investigation_reserve=30)
+    task = dict(task, access=[{'siteId': site['site_id'], 'url': site['url'], 'credentials': site['_credentials']}], investigation_reserve=30, single_site_debug=True)
     ledger = EvidenceLedger()
     prefix = 'sites/' + re.sub(r'[^a-zA-Z0-9_-]', '_', site['site_id'])
     phase = 'dispatch'; result = {'status': 'failed'}; failure = None
@@ -80,11 +80,19 @@ async def investigate_site(task, site, steps, goal=None):
             instance, page, owns = await browser.connect(pw, 0)
             try:
                 phase = 'investigation'
-                result = await planner.run_planner(task, page, assignment, ledger, max_steps=steps)
+                session = planner.InvestigationSession(page, [site])
+                try:
+                    result = await planner.run_planner(task, page, assignment, ledger, max_steps=steps, session=session)
+                except Exception as exc:
+                    result = {'site_id': site['site_id'], 'objective': assignment['objective'],
+                              'status': 'failed', 'history': session.history,
+                              'stop_reason': planner._safe_log_excerpt(str(exc), [site], 700)}
+                    raise
             finally:
                 if owns: await instance.close()
     except Exception as exc:
-        failure = {'phase': phase, 'error_type': type(exc).__name__}
+        failure = {'phase': phase, 'error_type': type(exc).__name__,
+                   'detail': planner._safe_log_excerpt(str(exc), [site], 700)}
         print(f"[{site['site_id']}] failed during {phase}: {type(exc).__name__}", flush=True)
     finally:
         evidence = [item.to_dict() for item in await ledger.snapshot()]

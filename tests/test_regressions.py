@@ -7,6 +7,22 @@ from rfq_agent.documents import parse_document
 
 
 class RegressionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_source_review_does_not_treat_access_notice_as_specification(self):
+        loop = AsyncMock()
+        loop.decide.return_value = '{"supported":false}'
+        self.assertFalse(await planner.review_source_evidence(loop, 'Read technical requirements',
+            'Access requires a receipt', 'Enter a receipt and acknowledge the terms'))
+        loop.decide.return_value = '{"supported":true}'
+        self.assertTrue(await planner.review_source_evidence(loop, 'Read technical requirements',
+            'Rated pressure is 140 units', 'Original specification: rated pressure 140 units'))
+
+    async def test_access_form_review_requires_explicit_model_classification(self):
+        loop = AsyncMock()
+        loop.decide.return_value = '{"access_only":false}'
+        self.assertFalse(await planner.review_access_form(loop, {'visible_text': 'Submit offer'}, {'text': 'Proceed'}))
+        loop.decide.return_value = '{"access_only":true}'
+        self.assertTrue(await planner.review_access_form(loop, {'visible_text': 'Read access receipt'}, {'text': 'Proceed'}))
+
     async def test_navigation_relevance_is_a_model_decision(self):
         loop = AsyncMock()
         loop.decide.return_value = '{"allowed":false}'
@@ -246,6 +262,29 @@ class RegressionTests(unittest.IsolatedAsyncioTestCase):
 
 
 class BrowserTests(unittest.IsolatedAsyncioTestCase):
+    async def test_verified_access_form_policy_is_temporary_and_cannot_sign(self):
+        from rfq_agent.submission import ExecutionPolicy
+        await self.page.set_content('<form onsubmit="event.preventDefault();document.body.dataset.released=1">'
+            '<p>Document release receipt acknowledgment</p><button>Obtain documents</button></form>')
+        target = (await planner.observe(self.page, [], None))['targets'][0]
+        action = {'action': 'click', 'target': target['id']}
+        with self.assertRaisesRegex(ValueError, 'form submission is disabled'):
+            await planner._apply(action, self.page, [], None)
+        await planner._apply(action, self.page, [], None, policy=ExecutionPolicy(allow_form_submit=True))
+        self.assertEqual(await self.page.locator('body').get_attribute('data-released'), '1')
+        await self.page.set_content('<form><button>Sign and submit</button></form>')
+        target = (await planner.observe(self.page, [], None))['targets'][0]
+        with self.assertRaisesRegex(ValueError, 'commit authorization'):
+            await planner._apply({'action': 'click', 'target': target['id']}, self.page, [], None,
+                                 policy=ExecutionPolicy(allow_form_submit=True))
+
+    async def test_duplicate_link_captions_preserve_record_context(self):
+        await self.page.set_content('<table><tr><td>Current specification</td><td><a href="/a">Open</a></td></tr>'
+                                    '<tr><td>Archived notice</td><td><a href="/b">Open</a></td></tr></table>')
+        observation = await planner.observe(self.page, [], None)
+        self.assertIn('Current specification', observation['targets'][0]['record_context'])
+        self.assertIn('Archived notice', observation['targets'][1]['record_context'])
+
     async def test_unlabelled_image_requests_visual_observation(self):
         await self.page.set_content('<canvas width="500" height="90"></canvas><label>Access number<input required></label>')
         observation = await planner.observe(self.page, [], None)
@@ -437,7 +476,7 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
             if route.request.url.endswith('/file'):
                 await route.fulfill(body='header\nSelected document fact', headers={'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="selected.csv"'})
             else:
-                await route.fulfill(body='<a href="/file">Selected document</a>')
+                await route.fulfill(content_type='text/html', body='<canvas width="400" height="100"></canvas><a href="/file">Selected document</a>')
         await self.page.route('https://example.test/**', respond)
         await self.page.goto('https://example.test/main')
         session = InvestigationSession(self.page, [{'site_id': 's', 'url': 'https://example.test'}])
@@ -446,6 +485,9 @@ class BrowserTests(unittest.IsolatedAsyncioTestCase):
         observation = await session.observe('s')
         self.assertIn('Selected document fact', observation['visible_text'])
         self.assertEqual(observation['url'], 'https://example.test/file')
+        self.assertFalse(planner._has_visual_challenge(observation))
+        branches = planner.decision_schema(observation, session.sites, {'site_id': 's'})['properties']['decision']['anyOf']
+        self.assertFalse(any(b['properties']['action']['enum'] == ['inspect_screen'] for b in branches))
         await session.apply({'action': 'return_to_page'}, 's')
         self.assertNotIn('Selected document fact', (await session.observe('s'))['visible_text'])
 

@@ -1,11 +1,33 @@
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from rfq_agent.loop import BrowserLoop
 
 
 class LoopDeadline(unittest.IsolatedAsyncioTestCase):
+    async def test_navigation_context_error_reobserves_once(self):
+        from playwright.async_api import Error
+        session = MagicMock()
+        session.page.url = 'https://example.test/'
+        session.page.is_closed.return_value = False
+        session.observe = AsyncMock(side_effect=[Error('Execution context was destroyed'), {'targets': []}])
+        loop = BrowserLoop(session, [], lambda: 10, 'test')
+        turns = [item async for item in loop.turns(1)]
+        self.assertEqual(len(turns), 1)
+        self.assertEqual(session.observe.await_count, 2)
+
+    async def test_persistent_browser_error_is_not_retried_forever(self):
+        from playwright.async_api import Error
+        session = MagicMock()
+        session.page.url = 'https://example.test/'
+        session.page.is_closed.return_value = False
+        session.observe = AsyncMock(side_effect=Error('Frame unavailable'))
+        with self.assertRaises(Error):
+            async for _ in BrowserLoop(session, [], lambda: 10, 'test').turns(1):
+                pass
+        self.assertEqual(session.observe.await_count, 2)
+
     async def test_model_presentation_is_normalized_without_changing_source(self):
         loop = BrowserLoop(AsyncMock(), [], lambda: 60, 'test')
         observation = {'visible_text': 'O\u200br\u200bi\u200bg\u200bi\u200bn\u200ba\u200bl'}

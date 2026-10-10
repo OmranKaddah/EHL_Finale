@@ -54,14 +54,23 @@ class InvestigationSession:
 
     async def observe(self, site_id):
         from .planner import observe, MAX_PAGE_TEXT, _credential_values
+        recovery = None
+        if self.frame is not None and self.frame.is_detached():
+            self.frame = None
+            self.page_offset = 0
+            recovery = 'The previously selected frame was detached; reobserve the parent and choose a current source.'
         observation = await observe(self.frame or self.page, self.sites, site_id, self.page_offset)
+        if recovery:
+            observation['context_recovery'] = recovery
         if self.document is not None:
             text = self.document[self.offset:self.offset + MAX_PAGE_TEXT]
             for site in self.sites:
                 for secret in _credential_values(site).values():
                     text = text.replace(secret, '[redacted]') if secret else text
             observation.update(visible_text=text, url=self.source_url, title=self.document_name,
-                               targets=[], document_offset=self.offset, document_length=len(self.document))
+                               targets=[], visual_content=[], verification_gates=[],
+                               disclosure_sections=[], gated_disclosures=False,
+                               document_offset=self.offset, document_length=len(self.document))
         observation['selected_archive_members'] = self.archive.namelist() if self.archive else []
         observation['selected_tab'] = self.tabs.index(self.page)
         observation['selected_frame'] = self.page.frames.index(self.frame) if self.frame in self.page.frames else None

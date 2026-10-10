@@ -19,9 +19,11 @@ class MissionProgress:
         self.navigation_visits = {}
         self.targets = {}
         self.opened_sites = set()
+        self.screen_visits = {}
 
     def observe(self, observation):
         self.context = (observation.get('url'), observation.get('selected_frame'), observation.get('selected_tab'))
+        self.screen_context = self.context
         self.targets = {target['id']: target for target in observation.get('targets', [])}
         # Reauthentication is legitimate recovery, even if its view repeats.
         if any(t.get('type') == 'password' for t in self.targets.values()):
@@ -38,6 +40,8 @@ class MissionProgress:
                 self.attempted.add(('click', target_id))
         for site_id in self.opened_sites:
             self.attempted.add(('open_site', site_id))
+        if self.screen_visits.get(self.screen_context, 0) >= 2:
+            self.attempted.add(('inspect_screen', ''))
 
     def navigation_key(self, target):
         return (self.context, target.get('tag'), target.get('href', ''), target.get('text', ''),
@@ -51,6 +55,8 @@ class MissionProgress:
         self.attempted.add(key)
         if kind == 'open_site':
             self.opened_sites.add(action.get('site_id'))
+        if kind == 'inspect_screen':
+            self.screen_visits[self.screen_context] = self.screen_visits.get(self.screen_context, 0) + 1
         target = self.targets.get(action.get('target'), {})
         if kind == 'click' and target.get('tag') == 'a' and not target.get('in_active_modal'):
             key = self.navigation_key(target)
@@ -71,7 +77,16 @@ class BrowserLoop:
             current = _site_for_url(self.session.page.url, self.sites)
             if current:
                 self.site_id = current['site_id']
-            observation = await asyncio.wait_for(self.session.observe(self.site_id), self.budget())
+            from playwright.async_api import Error as BrowserError
+            try:
+                observation = await asyncio.wait_for(self.session.observe(self.site_id), self.budget())
+            except BrowserError:
+                if self.session.page.is_closed() or self.budget() <= 1:
+                    raise
+                # Navigation can replace the execution context between DOM reads.
+                # Retry observation once; never reuse targets from the failed read.
+                await asyncio.sleep(0.25)
+                observation = await asyncio.wait_for(self.session.observe(self.site_id), self.budget())
             yield step, self.site_id, observation
 
     async def decide(self, system, content, observation, schema=None):

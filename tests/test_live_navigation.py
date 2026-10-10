@@ -69,7 +69,7 @@ class LiveNavigation(unittest.IsolatedAsyncioTestCase):
                   <fieldset disabled><legend>Protected section</legend>
                   <label>Receipt number<input name="receipt" required></label>
                   <label><input type="checkbox" required>Operating conditions read</label>
-                  <button type="submit">Continue</button></fieldset></form></section>
+                  <button type="submit">Obtain read access</button></fieldset></form></section>
                   <script>const paint=document.querySelector('canvas').getContext('2d');
                   paint.font='28px sans-serif';paint.fillText('Receipt number',20,30);paint.fillText('TEST-482619',20,75);
                   function unlock(){const ready=document.querySelector('input[type=range]').value>=99 && document.querySelector('#robot').checked;document.querySelector('fieldset').disabled=!ready;document.querySelector('#status').textContent=ready?'Unlocked':'Locked';}</script>'''

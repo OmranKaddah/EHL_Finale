@@ -2,6 +2,36 @@
 
 ## Implementation update (read before the older handoff below)
 
+Portal follow-up: single-site dispatch now explicitly limits its goal to the only
+available website. Screenshot requests are bounded across incidental changes and
+are unavailable for already parsed documents. Selected documents no longer inherit
+parent-page gate/visual metadata. Repeated captions include generic record/row
+context; extra relevance review applies to duplicate captions rather than every
+short navigation link. Browser observation retries once after execution-context
+errors, detached selected frames return to the parent, and failed debug runs retain
+history plus redacted error details. No site-specific routes/labels were added.
+
+Public mini-medium tender check completed in 13 actions, quoting one original
+quantity document. This does NOT verify latest amendments/current quantities.
+An earlier mini customer diagnostic exhausted 35 actions with zero evidence;
+it still used the overbroad short-link critic. The follow-up reached the document
+release form but was blocked by the old generic form-submit guard; it exhausted
+30 actions and recorded only access instructions, which is NOT technical evidence.
+The guard now uses a model classification of the observed form to allow a single
+read-access submit, restoring policy immediately afterward; commit/signature
+authorization stays disabled. Focused evidence now receives a relevance/support
+audit before being stored. These last changes are not yet publicly verified on
+the customer portal; an invented live receipt/form test passed with mini medium
+in 31 seconds (selected image code, grouped unlock, receipt, acknowledgment,
+model-verified unfamiliar access submit, then source evidence). Latest browser
+regression suite passed all 47 tests. Do not equate this with public customer success.
+Original reported runs are archived under
+`artifacts/archive/portal-reported`, and the failed customer diagnostic under
+`artifacts/archive/customer-diagnostic`. Latest suite: 108 tests, 103 passed,
+five paid live-model tests skipped (later suite reached 110; one further source
+review unit test added). Default nano-low remains unverified on these
+portal changes. Package rebuilt locally; not submitted.
+
 Explicit `--mission tan`, `baseline`, `discount`, `--goal`, `--after` and bounded
 mission timeout/steps now exist. TAN calls the actual mail API engine; discount
 uses `missions.py` with quoted result fields and a model applicability audit.

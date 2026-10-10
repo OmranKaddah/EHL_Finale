@@ -23,6 +23,16 @@ def approval():
 
 
 class MissionValidation(unittest.TestCase):
+    def test_screen_limit_survives_incidental_text_changes(self):
+        progress = MissionProgress()
+        for text in ('A', 'B'):
+            progress.observe({'url': 'https://shift.test/record', 'visible_text': text})
+            progress.record({'action': 'inspect_screen'})
+        progress.observe({'url': 'https://shift.test/record', 'visible_text': 'C'})
+        self.assertIn(('inspect_screen', ''), progress.attempted)
+        progress.observe({'url': 'https://shift.test/record', 'selected_frame': 1})
+        self.assertNotIn(('inspect_screen', ''), progress.attempted)
+
     def test_opening_a_site_cannot_reset_its_access_form_repeatedly(self):
         progress = MissionProgress()
         progress.observe({'url': 'about:blank'})
