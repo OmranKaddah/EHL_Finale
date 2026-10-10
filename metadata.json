@@ -1,0 +1,45 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4JK4E9TJDYRGRFB802330MF",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    ".gitignore",
+    "README.md",
+    "agent.json",
+    "docs/RFQ_AGENT.md",
+    "pyproject.toml",
+    "requirements-rfq.txt",
+    "scripts/package_rfq.py",
+    "src/hackathon_toolkit/rfq/__init__.py",
+    "src/hackathon_toolkit/rfq/browser.py",
+    "src/hackathon_toolkit/rfq/evidence.py",
+    "src/hackathon_toolkit/rfq/models.py",
+    "src/hackathon_toolkit/rfq/pricing.py",
+    "src/hackathon_toolkit/rfq/resolution.py",
+    "src/hackathon_toolkit/rfq/runtime.py",
+    "tests/test_rfq_browser_smoke.py",
+    "tests/test_rfq_package.py",
+    "tests/test_rfq_pricing.py",
+    "tests/test_rfq_resolution.py",
+    "tests/test_rfq_runtime.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 233177,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1843200,
+    "output_tokens": 34803,
+    "api_call_count": 30,
+    "subagent_tokens_complete": true
+  }
+}

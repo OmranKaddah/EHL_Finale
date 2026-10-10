@@ -1,0 +1,84 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4JK4E9TJDYRGRFB802330MF",
+  "session_id": "01a1250d-cda8-7610-b0e8-d9b8158f63fb",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T09:43:31.705738379Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "save_step_count": 1,
+  "files_touched": [
+    ".gitignore",
+    "README.md",
+    "agent.json",
+    "docs/RFQ_AGENT.md",
+    "pyproject.toml",
+    "requirements-rfq.txt",
+    "scripts/package_rfq.py",
+    "src/hackathon_toolkit/rfq/__init__.py",
+    "src/hackathon_toolkit/rfq/browser.py",
+    "src/hackathon_toolkit/rfq/evidence.py",
+    "src/hackathon_toolkit/rfq/models.py",
+    "src/hackathon_toolkit/rfq/pricing.py",
+    "src/hackathon_toolkit/rfq/resolution.py",
+    "src/hackathon_toolkit/rfq/runtime.py",
+    "tests/test_rfq_browser_smoke.py",
+    "tests/test_rfq_package.py",
+    "tests/test_rfq_pricing.py",
+    "tests/test_rfq_resolution.py",
+    "tests/test_rfq_runtime.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-sol",
+  "turn_id": "6fd5bd390dbe",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 233177,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 1843200,
+    "output_tokens": 34803,
+    "api_call_count": 30,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 2
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T09:43:31.684211028Z",
+    "agent_lines": 1864,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1864,
+    "total_lines_changed": 1865,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 313,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 313,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1876,
+      "agent_lines_removed": 1,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141
+      }
+    }
+  ]
+}
