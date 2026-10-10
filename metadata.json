@@ -3,7 +3,7 @@
   "checkpoint_id": "01M4KGBC9HKAS951CSRED0HE9E",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 12,
+  "checkpoints_count": 26,
   "files_touched": [
     ".env.example",
     "AGENTS.md",
@@ -44,7 +44,9 @@
     "src/hackathon_toolkit/rag.py",
     "src/hackathon_toolkit/rfq/browser.py",
     "src/hackathon_toolkit/rfq/clef.py",
+    "src/hackathon_toolkit/rfq/progress.py",
     "src/hackathon_toolkit/rfq/runtime.py",
+    "src/hackathon_toolkit/rfq/specialists.py",
     "src/hackathon_toolkit/rfq/trace.py",
     "src/hackathon_toolkit/rfq/validation.py",
     "src/hackathon_toolkit/schemas.py",
@@ -68,6 +70,7 @@
     "tests/test_rfq_deadlines.py",
     "tests/test_rfq_package.py",
     "tests/test_rfq_runtime.py",
+    "tests/test_rfq_specialists.py",
     "tests/test_rfq_submission_validation.py",
     "tests/test_search_processing.py",
     "tests/test_tabular.py"
@@ -93,14 +96,21 @@
       "compact_transcript": "/2/transcript.jsonl",
       "content_hash": "/2/content_hash.txt",
       "prompt": "/2/prompt.txt"
+    },
+    {
+      "metadata": "/3/metadata.json",
+      "transcript": "/3/full.jsonl",
+      "compact_transcript": "/3/transcript.jsonl",
+      "content_hash": "/3/content_hash.txt",
+      "prompt": "/3/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 1186369,
+    "input_tokens": 1871297,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 61174272,
-    "output_tokens": 196331,
-    "api_call_count": 595,
+    "cache_read_tokens": 70899200,
+    "output_tokens": 255179,
+    "api_call_count": 702,
     "subagent_tokens_complete": true
   }
 }
