@@ -8,6 +8,7 @@ import time
 from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI
 
 from .contracts import AgentAction
+from .tool_specs import model_tools
 
 
 def parse_action(payload: str) -> AgentAction:
@@ -55,9 +56,20 @@ def parse_action(payload: str) -> AgentAction:
             record(item)
     if action == "fill_answer":
         container(args, "fields", list)
-    if action == "inspect_controls":
+    if action in {"inspect_controls", "read_links"}:
         container(args, "refs", list)
     return AgentAction.model_validate({"action": action, "summary": data.get("summary") or f"Execute {action}", "args": args})
+
+
+def parse_tool_call(name: str, payload: str) -> AgentAction:
+    if name == "act":
+        return parse_action(payload)
+    data = json.loads(payload)
+    if not isinstance(data, dict):
+        raise ValueError("Tool arguments must be an object")
+    if "action" in data and data["action"] != name:
+        raise ValueError("Tool name and nested action conflict")
+    return parse_action(json.dumps({**data, "action": name}))
 
 
 class QwenClient:
@@ -67,8 +79,6 @@ class QwenClient:
         self.input_tokens = self.output_tokens = 0
 
     async def decide(self, messages, deadline):
-        tool = {"type": "function", "function": {"name": "act", "description": "Choose one grounded next action.",
-                                                "parameters": AgentAction.model_json_schema()}}
         for attempt in range(3):
             started = time.monotonic()
             try:
@@ -76,8 +86,8 @@ class QwenClient:
                 self.telemetry.emit("model_started", model=self.config.model, attempt=attempt + 1, remaining=deadline.remaining)
                 async with asyncio.timeout(timeout):
                     reply = await self.client.chat.completions.create(
-                        model=self.config.model, messages=messages, tools=[tool],
-                        tool_choice={"type": "function", "function": {"name": "act"}},
+                        model=self.config.model, messages=messages, tools=model_tools(),
+                        tool_choice="required",
                         parallel_tool_calls=False, temperature=0.1, max_tokens=6000,
                     )
                 usage = reply.usage
@@ -89,9 +99,10 @@ class QwenClient:
                                     call_usage=usage.model_dump() if usage else None)
                 message = reply.choices[0].message
                 if message.tool_calls:
-                    if len(message.tool_calls) != 1 or message.tool_calls[0].function.name != "act":
-                        raise ValueError("Return exactly one act tool call")
+                    if len(message.tool_calls) != 1:
+                        raise ValueError("Return exactly one tool call")
                     payload = message.tool_calls[0].function.arguments
+                    return parse_tool_call(message.tool_calls[0].function.name, payload)
                 else:
                     payload = (message.content or "").strip().removeprefix("```json").removesuffix("```").strip()
                 return parse_action(payload)

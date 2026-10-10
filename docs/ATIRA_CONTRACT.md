@@ -45,6 +45,8 @@ The detailed runtime brief controls calculations. In particular:
   never percentage-discounted. Index validity windows are inclusive and must be date-selected.
 - Shared setup uses quantity times allocation mass, and the cent rule stated in its mail. Project bonus uses marginal
   bands and aggregate HALF_UP rounding, then largest remainders with ascending position identifiers breaking ties.
+- Ordinary setup can be assigned or amended per position in Q&A. It is separate from material-level defaults and
+  shared pools. Q&A bonus-plan identifiers select the corresponding authorized finance record and membership.
 - Final unit = clause-discounted base + clause-discounted mass +
   (ordinary setup + shared setup + cartons - allocated bonus) / pieces, rounded HALF_UP once at this final step.
   Total = sum(pieces times final rounded unit price). Rounded displayed breakdowns are never formula inputs.

@@ -80,4 +80,5 @@ expiry is not the run timer. `--max-steps` limits debugging rehearsals; use the 
 
 See [architecture](docs/ARCHITECTURE.md), [official contract](docs/ATIRA_CONTRACT.md),
 [debugging](docs/DEBUGGING.md), [Windows runbook](docs/RUNBOOK_WINDOWS.md), and [known gaps](docs/KNOWN_GAPS.md).
-Live validation results are recorded separately from mocked tests; passing unit tests is not a live signed bid.
+The [rehearsal report](docs/REHEARSAL_REPORT.md) records actual commands, tests, run IDs, results and artifacts.
+Passing unit tests is not a live signed bid.

@@ -15,7 +15,9 @@ from .runtime import USER_AGENT
 
 
 def validate_answer(answer: dict, schema: dict):
-    jsonschema.Draft202012Validator(schema).validate(answer)
+    validator = jsonschema.validators.validator_for(schema)
+    validator.check_schema(schema)
+    validator(schema).validate(answer)
     payload = simplejson.dumps(answer, use_decimal=True, ensure_ascii=False).encode()
     if len(payload) > 65536:
         raise ValueError("Answer exceeds platform size limit")

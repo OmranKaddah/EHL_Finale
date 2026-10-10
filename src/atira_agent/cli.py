@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from .telemetry import Redactor, Telemetry, configure_console, safe_error
 
 
 async def run(args):
+    started = time.monotonic()
     redactor = Redactor(value for key, value in os.environ.items() if any(x in key for x in ("KEY", "TOKEN", "PASSWORD")))
     telemetry = Telemetry(Path(args.trace_dir), redactor)
     browser = model = dashboard = None
@@ -28,7 +30,7 @@ async def run(args):
             for value in site.credentials.values():
                 redactor.add(value)
         telemetry.run_id = context.run_id
-        deadline = Deadline(config.budget, config.reserve, context.expires_at if config.sandbox else None)
+        deadline = Deadline(config.budget, config.reserve, context.expires_at if config.sandbox else None, started=started)
         telemetry.emit("run_started", mode="sandbox" if config.sandbox else "scouting", provider=config.provider,
                        model=config.model, remaining=deadline.remaining)
         model = QwenClient(config, telemetry)

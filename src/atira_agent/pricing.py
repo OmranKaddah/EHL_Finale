@@ -79,7 +79,8 @@ def _calculate(ledger, allow_partial):
                 continue
             material = one(matches, f"Multiple exact active matches for {pos}")
             lines[pos] = {"position": position, "requirement": req, "material": material, "quantity": quantity,
-                          "base": None, "mass": None, "setup": material.ordinary_setup_eur,
+                          "base": None, "mass": None, "setup": position.ordinary_setup_eur
+                          if position.ordinary_setup_eur is not None else material.ordinary_setup_eur,
                           "shared": ZERO, "packaging": ZERO, "bonus": ZERO, "scope": "base"}
         except (Unresolved, ValueError) as exc:
             issues[pos].append(str(exc))
@@ -126,6 +127,8 @@ def _calculate(ledger, allow_partial):
                 if metal_rate is None:
                     raise Unresolved("Missing mass surcharge rate")
                 line["mass"] = material.mass_kg * metal_rate
+            if line["setup"] is None:
+                raise Unresolved("Need an evidenced ordinary setup fee or explicit zero for this position")
             if position.commercial_key:
                 line["scope"] = mail("commercial", "kalkulation", "Konditionsregeln",
                                      key=position.commercial_key).discount_scope
@@ -173,15 +176,26 @@ def _calculate(ledger, allow_partial):
             for pos in members:
                 issues[pos].append(str(exc))
 
-    bonus = mail("bonus", "finanzen", "Projektbonus", required=False)
-    if bonus:
-        if not set(bonus.eligible_positions) <= set(tender.position_ids):
+    bonus_groups = defaultdict(list)
+    for pos, line in lines.items():
+        if line["position"].bonus_plan:
+            bonus_groups[line["position"].bonus_plan].append(pos)
+    if bonus_groups:
+        plans = [(mail("bonus", "finanzen", "Projektbonus", key=key), members)
+                 for key, members in bonus_groups.items()]
+    else:
+        bonus = mail("bonus", "finanzen", "Projektbonus", required=False)
+        plans = [(bonus, bonus.eligible_positions)] if bonus else []
+    for bonus, members in plans:
+        if bonus_groups and bonus.eligible_positions and set(bonus.eligible_positions) != set(members):
+            raise Unresolved("Project-bonus membership conflicts between Q&A assignments and the finance record")
+        if not set(members) <= set(tender.position_ids):
             raise Unresolved("Bonus includes an unknown tender position")
-        if any(pos not in goods for pos in bonus.eligible_positions):
-            for pos in bonus.eligible_positions:
+        if any(pos not in goods for pos in members):
+            for pos in members:
                 issues[pos].append("Whole eligible goods total is needed for project bonus")
         else:
-            eligible = {pos: goods[pos] for pos in bonus.eligible_positions}
+            eligible = {pos: goods[pos] for pos in members}
             credit = marginal_bonus(sum(eligible.values(), ZERO), bonus.bands)
             for pos, amount in allocate(credit, eligible).items():
                 lines[pos]["bonus"] = amount

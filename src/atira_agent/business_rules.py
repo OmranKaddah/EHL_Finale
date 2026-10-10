@@ -56,10 +56,12 @@ def effective_position(position, answers):
     for answer in answers:
         if answer.position != position.position:
             continue
-        for key in ("quantity", "commercial_key", "packaging_key", "commitment_key", "pool_keys"):
+        for key in ("quantity", "unit", "commercial_key", "packaging_key", "commitment_key", "pool_keys", "ordinary_setup_eur"):
             value = getattr(answer, key)
             if value is not None:
                 updates[key] = value
+        if "bonus_plan" in answer.model_fields_set:
+            updates["bonus_plan"] = answer.bonus_plan
     return position.model_copy(update=updates)
 
 

@@ -3,11 +3,14 @@ from __future__ import annotations
 import asyncio
 import base64
 import difflib
+import io
 import re
 import time
 from pathlib import Path
 from urllib.parse import urljoin, urlsplit
 
+from PIL import Image
+from playwright.async_api import TimeoutError as BrowserTimeoutError
 from playwright.async_api import async_playwright
 
 from .contracts import Observation
@@ -61,6 +64,7 @@ class BrowserSession:
         self.latest_tan = None
         self.last_screenshot = 0.0
         self.last_image = None
+        self.last_image_size = None
         for site in run.access:
             for key, value in site.credentials.items():
                 self.secret_values[f"{site.siteId}:{key}"] = (value, origin(site.url))
@@ -134,6 +138,27 @@ class BrowserSession:
             raise ValueError("Stale or unknown control reference; observe again")
         return self.refs[reference]
 
+    async def _click(self, element):
+        try:
+            await element.click(no_wait_after=True)
+        except BrowserTimeoutError as exc:
+            # A clipped iframe can make a DOM-visible button unreachable by mouse. Keyboard activation
+            # is still a normal UI action. Only recover a pre-dispatch viewport failure, never an
+            # uncertain click/navigation or a control blocked by another modal.
+            clipped = await element.evaluate("e => {const r=e.getBoundingClientRect(); return r.left>=innerWidth || r.top>=innerHeight || r.right<=0 || r.bottom<=0}")
+            viewport_failure = "outside of the viewport" in str(exc) or (clipped and "intercepts pointer events" in str(exc))
+            blocked = await element.evaluate("e => {const m=document.querySelector('dialog[open],[role=dialog][aria-modal=true]'); return !!m && !m.contains(e)}")
+            if not viewport_failure or blocked or not await element.is_enabled():
+                raise
+            info = await element.evaluate("e => ({tag:e.tagName,type:e.type,role:e.getAttribute('role')})")
+            if info["tag"] not in {"BUTTON", "A"} and info["role"] not in {"button", "link"} and info["type"] not in {"checkbox", "radio", "button", "submit"}:
+                raise
+            await element.focus()
+            if not await element.evaluate("e => document.activeElement === e"):
+                raise
+            await element.press("Space" if info["type"] in {"checkbox", "radio"} else "Enter", timeout=1500)
+            self.telemetry.emit("browser_recovered", method="keyboard_activation", reason="clipped observed control")
+
     async def inspect_controls(self, references):
         """Inspect a model-selected set of independent controls, observing after EVERY click."""
         if not isinstance(references, list) or not 1 <= len(references) <= 8 or len(set(references)) != len(references):
@@ -147,7 +172,7 @@ class BrowserSession:
                 raise ValueError("Inspection changed page/tab/dialog; observe and choose the next action")
             if not await element.evaluate("e => e.isConnected"):
                 raise ValueError("Selected inspection control became stale; observe again")
-            await element.click(no_wait_after=True)
+            await self._click(element)
             after = await self.observe()
             additions = [line[2:] for line in difflib.ndiff(before.text.splitlines(), after.text.splitlines())
                          if line.startswith("+ ")]
@@ -155,7 +180,33 @@ class BrowserSession:
                           "revealed_text": "\n".join(additions), "dialog": after.dialog}
             before = after
 
+    async def read_links(self, references):
+        """Visit only explicitly selected, currently observed hyperlinks; never discover more links."""
+        if not isinstance(references, list) or not 1 <= len(references) <= 6 or len(set(references)) != len(references):
+            raise ValueError("Select one to six distinct observed record links")
+        selected = []
+        for ref in references:
+            self._ref(ref)
+            control = next(x for x in self.last_observation.controls if x["ref"] == ref)
+            if not control.get("href"):
+                raise ValueError("Selected control has no observed hyperlink; inspect it with click instead")
+            selected.append((control["label"], self._url(control["href"])))
+        original_tab = self.tab
+        try:
+            for label, url in selected:
+                await self.act("navigate", {"url": url, "new_tab": True})
+                observation = await self.observe()
+                yield observation, {"selected_label": label, "observation": observation.id, "tab": self.tab,
+                                    "url": observation.url, "text": observation.text[:18000],
+                                    "truncated": len(observation.text) > 18000}
+        finally:
+            self.tab = original_tab
+            await self.page.bring_to_front()
+
     async def observe(self, include_image=False) -> Observation:
+        # An image from an earlier observation must never ground a new pixel action.
+        self.last_image = None
+        self.last_image_size = None
         self.observation_number += 1
         oid = f"o{self.observation_number}"
         self.refs = {}
@@ -228,6 +279,8 @@ class BrowserSession:
         try:
             # Mask editable values, including usernames/TANs, even when a page does not label them correctly.
             data = await self.page.screenshot(type="png", mask=masks, timeout=4000)
+            with Image.open(io.BytesIO(data)) as image:
+                self.last_image_size = image.size
             filename = f"screen-{self.telemetry.action_id:05d}.png"
             (self.telemetry.trace_dir / filename).write_bytes(data)
             self.last_image = base64.b64encode(data).decode()
@@ -262,7 +315,7 @@ class BrowserSession:
         elif name in {"click", "fill", "select", "check", "press"}:
             element = self._ref(args["ref"])
             if name == "click":
-                await element.click(no_wait_after=True)
+                await self._click(element)
             elif name == "fill":
                 value = str(args.get("text", ""))
                 if args.get("secret"):
@@ -291,12 +344,15 @@ class BrowserSession:
             else:
                 await element.press(args["key"])
         elif name == "scroll":
-            await self.page.mouse.wheel(0, max(-2000, min(2000, int(args.get("pixels", 650)))))
+            pixels = max(-2000, min(2000, int(args.get("pixels", 650))))
+            if not 0 <= self.frame_index < len(self.page.frames):
+                raise ValueError("Selected frame is no longer available")
+            await self.page.frames[self.frame_index].evaluate("pixels => window.scrollBy(0, pixels)", pixels)
         elif name == "pixel_click":
             if not self.last_image or not self.last_observation or args.get("observation") != self.last_observation.id:
                 raise ValueError("Pixel clicks require the current screenshot observation")
             x, y = int(args["x"]), int(args["y"])
-            if not (0 <= x < 1280 and 0 <= y < 800):
+            if not self.last_image_size or not (0 <= x < self.last_image_size[0] and 0 <= y < self.last_image_size[1]):
                 raise ValueError("Click outside screenshot")
             await self.page.mouse.click(x, y)
         elif name == "dialog":

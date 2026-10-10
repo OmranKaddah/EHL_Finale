@@ -32,6 +32,9 @@ class SyntheticSites:
         self.answer = None
         self.hits = {}
         self.fail_once = variant == 2
+        self.expire_once = variant == 2
+        self.session_renewed = False
+        self.archived_read = False
 
     async def start(self):
         app = web.Application()
@@ -41,6 +44,8 @@ class SyntheticSites:
         app.router.add_get("/sign/mail", self.mail)
         app.router.add_post("/sign/request", self.request_tan)
         app.router.add_post("/offer/accept", self.accept)
+        app.router.add_post("/renew", self.renew)
+        app.router.add_get("/archived/mail", self.archive)
         self.runner = web.AppRunner(app)
         await self.runner.setup()
         site = web.TCPSite(self.runner, "127.0.0.1", 0)
@@ -57,11 +62,29 @@ class SyntheticSites:
         if self.fail_once and name == "erp":
             self.fail_once = False
             return self.page(f'<h1>Temporary error</h1><a href="/{name}">Retry selected page</a>')
+        if self.expire_once and name == "erp":
+            self.expire_once = False
+            return self.page('''<h1>Synthetic session expired</h1><form action="/renew" method="post">
+              <label>Login name<input name="user"></label><label>Password<input name="password" type="password"></label>
+              <button>Renew session</button></form>''')
+        if self.variant == 2 and name == "mail":
+            return self.page('<h1>Inbox: no matching commercial messages</h1><a href="/archived/mail">Open archive</a>')
         if self.variant == 1:
             control = f'<a href="/records/{name}">Read {name} records</a>'
         else:
             control = f'''<button onclick="document.getElementById('viewer').src='/records/{name}'">Read {name} records</button><iframe id="viewer"></iframe>'''
         return self.page(f"<h1>{name}</h1>{control}<a href='/offer/form'>Configure offer</a>")
+
+    async def renew(self, request):
+        data = await request.post()
+        if data.get("user") != "synthetic-user" or data.get("password") != "synthetic-password":
+            return self.page("Synthetic credentials invalid")
+        self.session_renewed = True
+        raise web.HTTPSeeOther("/erp")
+
+    async def archive(self, request):
+        self.archived_read = True
+        return self.page('''<h1>Archive</h1><button onclick="document.getElementById('viewer').src='/records/mail'">Read mail records</button><iframe id="viewer"></iframe>''')
 
     async def records(self, request):
         groups = {"tender": {"tender", "position"}, "spec": {"revision", "requirement"},
@@ -117,6 +140,13 @@ class ObservingModel:
             return AgentAction(action=action, summary="Synthetic observation-conditioned decision", args=args)
         def ref(label):
             return next(x["ref"] for x in controls if x["label"].strip() == label)
+        if "Synthetic session expired" in text:
+            for label, secret in (("Login name", "erp:username"), ("Password", "erp:password")):
+                if not next(x for x in controls if x["label"] == label)["filled"]:
+                    return act("fill", ref=ref(label), secret=secret)
+            return act("click", ref=ref("Renew session"))
+        if any(x["label"] == "Open archive" for x in controls):
+            return act("click", ref=ref("Open archive"))
         if obs["dialog"]:
             return act("dialog", accept=True)
         if "successfully received" in text:
@@ -177,7 +207,9 @@ class ObservingModel:
 async def test_observed_extraction_calculation_and_signed_receipt(telemetry, variant):
     sites = await SyntheticSites(variant).start()
     run = RunContext(challenge_id="rfq", brief="Synthetic RFQ browser integration",
-                     access=[{"siteId": name, "url": f"{sites.base}/{name}"} for name in ("tender", "spec", "erp", "mail")],
+                     access=[{"siteId": name, "url": f"{sites.base}/{name}", "credentials":
+                              {"username": "synthetic-user", "password": "synthetic-password"} if name == "erp" else {}}
+                             for name in ("tender", "spec", "erp", "mail")],
                      submission={"kind": "site", "siteId": "tender", "url": sites.base + "/offer/form"}, answer_schema={})
     config = Config(False, (), "qwen", "qwen", "http://127.0.0.1", "local", 120, 20)
     browser = BrowserSession(config, run, telemetry, headful=False)
@@ -191,6 +223,8 @@ async def test_observed_extraction_calculation_and_signed_receipt(telemetry, var
         assert len(controller.ledger.facts) == 4
         assert set(sites.hits) == {"tender", "spec", "erp", "mail"}
         assert len(model.steps) > 20
+        if variant == 2:
+            assert sites.session_renewed and sites.archived_read
         trace = (telemetry.trace_dir / "events.jsonl").read_text(encoding="utf-8")
         assert str(654320 + sites.tan_generation) not in trace
     finally:
@@ -215,6 +249,15 @@ async def test_stale_refs_and_secret_origin(telemetry):
         await browser.observe()
         with pytest.raises(ValueError, match="Stale"):
             await browser.act("fill", {"ref": old, "text": "99"})
+        await browser.act("navigate", {"url": sites.base + "/erp"})
+        observed = await browser.observe()
+        selected = next(x["ref"] for x in observed.controls if x["label"] == "Read erp records")
+        original_tab = browser.tab
+        results = [row async for row in browser.read_links([selected])]
+        assert "DATA_BEGIN" in results[0][0].text
+        assert results[0][1]["selected_label"] == "Read erp records"
+        assert browser.tab == original_tab
+        assert browser.page.url == sites.base + "/erp"
     finally:
         await browser.close()
         await sites.close()
@@ -230,6 +273,12 @@ async def test_dashboard_updates_and_bounds(telemetry):
             assert response.json()["stage"] == "pricing"
             assert (await client.get(f"http://127.0.0.1:{port}/")).status_code == 200
             assert (await client.get(f"http://127.0.0.1:{port}/artifact/no.png")).status_code == 404
+            async with client.stream("GET", f"http://127.0.0.1:{port}/events") as response:
+                telemetry.emit("stage_changed", stage="submitting", remaining=180)
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        assert json.loads(line[6:])["stage"] == "submitting"
+                        break
     finally:
         await dashboard.close()
 
@@ -256,5 +305,19 @@ async def test_selected_tooltips_are_observed_before_the_next_hides_them(telemet
         assert rows[0][0].id != rows[1][0].id
         with pytest.raises(ValueError, match="Stale"):
             await browser.act("click", {"ref": initial.controls[0]["ref"]})
+        await browser.page.set_viewport_size({"width": 1500, "height": 950})
+        current = await browser.observe(include_image=True)
+        assert browser.last_image_size == (1500, 950)
+        await browser.act("pixel_click", {"observation": current.id, "x": 1400, "y": 900})
+        fresh = await browser.observe()
+        with pytest.raises(ValueError, match="current screenshot"):
+            await browser.act("pixel_click", {"observation": fresh.id, "x": 1, "y": 1})
+        await browser.page.set_content('''<iframe style="width:100px;height:100px" srcdoc="
+          <button style='position:fixed;left:200px' onclick='this.innerText=String(17)'>Close</button>"></iframe>''')
+        observed = await browser.observe()
+        target = next(x["ref"] for x in observed.controls if x["label"] == "Close")
+        browser.context.set_default_timeout(500)
+        await browser.act("click", {"ref": target})
+        assert "17" in (await browser.observe()).text
     finally:
         await browser.close()

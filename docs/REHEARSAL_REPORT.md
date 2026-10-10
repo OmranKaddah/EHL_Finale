@@ -1,0 +1,90 @@
+# Verification and rehearsal report
+
+Work continues on `fresh-start`; `main` and `origin/main` remain at `6fa31a6`. No remote push, scored submission,
+paid-provider inference, or team-setting change was performed. New implementation code is independent of main.
+
+## Synthetic and local verification
+
+- Python 3.12, frozen `uv.lock`, runtime `uv sync --frozen --no-dev`; Windows development and Linux sandbox setup verified.
+- Latest full suite: **81 passed**; `uv run ruff check .` passed. The changed browser fixture was subsequently rerun:
+  five integration tests passed, including both signed mock layouts, frame handling, stale controls, real session
+  renewal, archived mail, transient ERP failure, transient tooltips, dynamic screenshot dimensions and SSE delivery.
+- Browser orchestration tests use an observation-conditioned **model double**. They do not prove live Qwen accuracy.
+- Hosted Qwen smoke: real `READY` response in `artifacts/model-smoke-verified/`; real named-tool selection in
+  `artifacts/native-tool-smoke/` selected the requested current synthetic control in 2.7 seconds.
+- Local dashboard rendered and was inspected earlier in `artifacts/dashboard-verification.png`; endpoint/SSE tests
+  cover the updated viewer. Sanitized local events, evidence and screenshots remain under ignored `artifacts/`.
+- Archive tests verify repeated builds have identical hashes despite source mtime changes, exclude local state,
+  and contain only regular files with a root manifest. Archive and exact CLI manifest are inspected before uploading.
+
+## Public scouting
+
+`scripts/run-local.ps1 -TraceDir artifacts/public-full-5` is the current visible rehearsal. Earlier attempts:
+
+| Trace directory | Observed result |
+| --- | --- |
+| `artifacts/public-navigation/` | Tender navigation, modal recovery, selected documents and five position records; short step limit. |
+| `artifacts/public-full/` | Hidden-password observation loop; fixed by exposing only `filled` and retaining opaque credential handles. |
+| `artifacts/public-full-2/` | Citation used a control ref as page ID; fixed by resolving the ref to its observation while checking the quote. |
+| `artifacts/public-full-3/` | Q&A reached; malformed record transport and unknown citation IDs prevented completion. |
+| `artifacts/public-full-4/` | Real session-expiry recovery, one long Qwen timeout and missing action discriminator; stopped locally to apply native tools. |
+
+No public scouting acknowledgment has been verified yet. A local run or open configurator is not a signed acknowledgment.
+
+## Unscored sandbox runs
+
+Started with the existing authenticated Adira CLI using:
+
+```powershell
+atira test-run . --challenge rfq --dry-run --json
+atira test-run . --challenge rfq --no-open --json
+uv run scripts/atira-debug.py get_run --run-id <id> --out artifacts/<name>.json
+uv run scripts/atira-debug.py diagnose_run --run-id <id> --out artifacts/<name>.json
+```
+
+### First run — failed, no submitted answer
+
+- Run: [run_208dd5bc4633b50f](https://ehl-challenge.atira.ai/runs/run_208dd5bc4633b50f)
+- Rehearsal: `reh_20633baa2613f0fa`.
+- Package: `c4d5ca89c1f8c7406281706dca161906eb49aa8997d1f81f988abae295753b0f`, 40 files, 104,288 compressed bytes.
+- Official result: exit code 2 without submission; 20:07 elapsed, 95 model calls, 788,489 input and 52,918 output tokens.
+- Final `get_run` diagnosis reports quality **0**, not eligible, and simulated cost **$0.1492**. The compact status
+  endpoint returned `score: null`; there was no accepted answer to score. Qwen usage remains free to the participant.
+- Artifacts: `artifacts/sandbox-first-final.json`, `artifacts/sandbox-first-diagnosis.json`,
+  `artifacts/sandbox-first-logs.jsonl`, and later snapshot `artifacts/sandbox-snapshot.jsonl`.
+- Official recording inventory initially reported **none**; no recording review is claimed.
+- Fixed failures: serialized citation lists, ambiguous same-label loop detection, slow tooltip-by-tooltip inspection,
+  rejected extraction retention and missing position-level setup/unit/bonus fields.
+
+### Second run — failed, no submitted answer
+
+- Run: [run_3ea40a1368cc156a](https://ehl-challenge.atira.ai/runs/run_3ea40a1368cc156a)
+- Rehearsal: `reh_2e50be2628773075`.
+- Package: `9c711652fdc4f1e0a607de61e81078a491bceec30f41ce7133569903ac745065`, 43 files, 109,303 compressed bytes.
+- Live evidence: combined disclosure inspection successfully collected dated Q&A batches. Missing schema fields
+  exposed position-specific setup and keyed bonus requirements; those were fixed locally after this upload.
+- Artifacts: `artifacts/sandbox-second-launch.json`, `artifacts/sandbox-second-status.json`,
+  `artifacts/sandbox-second-logs.jsonl`.
+- This package predates the native named-tool interface and the latest business-rule corrections.
+- Official result: eight consecutive tool/model failures; 12:40 elapsed, 81 calls, 912,885 input and 28,716 output
+  tokens, quality **0**, not eligible, simulated cost **$0.1561**. No answer and no recording were available.
+- Terminal blocker: repeatedly clicking a modal close button clipped by an iframe in the supplier document viewer,
+  mixed with missing action discriminators. Generic keyboard activation after a confirmed pre-click viewport failure
+  and native named tools address these failures; no public selector or route was added.
+- Focused failure evidence: `artifacts/sandbox-second-errors.json` and `artifacts/sandbox-second-last-actions.json`.
+
+## Local commits and Entire
+
+| Commit | Verified checkpoint |
+| --- | --- |
+| `461e966` | `01M4K4NG1E9B81SVN4TW2DX4WE` |
+| `ea3648e` | `01M4K4ZP2T6WY88FAN9FWX28GR` |
+
+The hook was waiting on a hidden terminal confirmation. Interactive execution allowed normal capture and commit.
+Entire also retained an earlier degraded-capture warning; the listed checkpoints were explicitly verified afterward.
+
+## Remaining acceptance work
+
+No live signed receipt is verified. Complete the current scouting run and evaluate the corrected package again.
+Do not describe passing mocked tests or zero-quality failed runs as an
+accepted sandbox submission. The 180-second reserve remains an initial setting until real signing duration is measured.

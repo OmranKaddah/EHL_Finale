@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import re
@@ -19,8 +20,8 @@ def package_files(root):
         rel = path.relative_to(root)
         if rel.parts[0] not in ROOT_FILES | ROOT_DIRS or any(part in EXCLUDED for part in rel.parts):
             continue
-        if path.is_symlink():
-            raise ValueError(f"Symlinks are not permitted: {rel}")
+        if path.is_symlink() or path.is_junction() or not path.resolve().is_relative_to(root.resolve()):
+            raise ValueError(f"Links or paths outside the package are not permitted: {rel}")
         if path.is_file() and path.suffix not in {".pyc", ".png", ".pdf", ".zip", ".log", ".jsonl"}:
             files.append(path)
     return sorted(files)
@@ -42,9 +43,17 @@ def check(root, output):
         if path.is_relative_to(root / "src") and re.search(r"atira-rfq-.*\.kyora\.run", text):
             raise ValueError("Public challenge website constant in runtime code")
     output.parent.mkdir(parents=True, exist_ok=True)
-    with tarfile.open(output, "w:gz") as archive:
-        for path in files:
-            archive.add(path, arcname=path.relative_to(root).as_posix(), recursive=False)
+    with output.open("wb") as target, gzip.GzipFile(filename="", mode="wb", fileobj=target, mtime=0) as compressed:
+        with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as archive:
+            for path in files:
+                info = archive.gettarinfo(path, arcname=path.relative_to(root).as_posix())
+                if not info.isfile():
+                    raise ValueError(f"Only regular files are permitted: {path}")
+                info.uid = info.gid = info.mtime = 0
+                info.uname = info.gname = ""
+                info.mode = 0o644
+                with path.open("rb") as content:
+                    archive.addfile(info, content)
     size = output.stat().st_size
     if size > 20_000_000:
         raise ValueError("Package exceeds 20 MB compressed")

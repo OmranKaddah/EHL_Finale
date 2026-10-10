@@ -16,7 +16,9 @@ main{display:grid;grid-template-columns:1.1fr 1fr;gap:20px}section{background:#1
 @media(max-width:900px){main{grid-template-columns:1fr}} </style>
 <header><h1>Atira / live investigation</h1><span id="stage" class="label">Connecting</span><span id="timer"></span></header>
 <p id="url"></p><main><section><img id="screen" alt="Latest sanitized browser screenshot"><p id="action"></p>
-<div id="status"></div><h3>Pricing and unresolved evidence</h3><pre id="pricing">Waiting for evidence</pre></section>
+<div id="status"></div><p id="usage" class="small"></p><p id="outcome" class="small"></p>
+<h3>Pricing and unresolved evidence</h3><pre id="pricing">Waiting for evidence</pre>
+<details><summary>Extraction progress</summary><pre id="pending"></pre></details></section>
 <section><h3>Run timeline</h3><div id="events"></div><h3>Latest evidence</h3><pre id="evidence"></pre></section></main>
 <p class="small">Local only. Secrets and sensitive screens are omitted. The agent continues if this viewer disconnects.</p>
 <script>
@@ -24,6 +26,10 @@ const $=id=>document.getElementById(id);let events=[],remaining=0,updated=Date.n
 function render(e){events.push(e);if(events.length>400)events.shift();
  if(e.stage)$('stage').textContent=e.stage;if(e.remaining!==undefined){remaining=e.remaining;updated=Date.now()}
  if(e.url)$('url').textContent=e.url;if(e.summary)$('action').textContent=e.summary;
+ if(e.event==='observation')$('url').textContent='Tab '+e.tab+' · '+e.url;
+ if(e.input_tokens!==undefined)$('usage').textContent='Model tokens: '+e.input_tokens+' input / '+e.output_tokens+' output';
+ if(e.event==='tool_result')$('outcome').textContent=e.tool+': '+JSON.stringify(e.result).slice(0,350);
+ if(e.event==='evidence_status')$('pending').textContent=JSON.stringify({counts:e.counts,unresolved:e.unresolved},null,2);
  if(e.event==='screenshot')$('screen').src='/artifact/'+encodeURIComponent(e.path)+'?t='+Date.now();
  if(e.event==='evidence_added')$('evidence').textContent=JSON.stringify(e.evidence,null,2);
  if(e.event==='pricing_computed')$('pricing').textContent=JSON.stringify(e.result,null,2);
@@ -31,7 +37,7 @@ function render(e){events.push(e);if(events.length>400)events.shift();
  const a=document.createElement('article');if(e.error)a.className='error';
  a.textContent='['+Number(e.elapsed).toFixed(1)+'s] '+e.event+' '+(e.summary||e.error||e.stage||e.message||'');
  $('events').append(a);while($('events').children.length>400)$('events').firstChild.remove();$('events').scrollTop=$('events').scrollHeight;}
-fetch('/state').then(r=>r.json()).then(s=>{if(s.screenshot)$('screen').src='/artifact/'+encodeURIComponent(s.screenshot);if(s.pricing_result)$('pricing').textContent=JSON.stringify(s.pricing_result,null,2);if(s.latest_evidence)$('evidence').textContent=JSON.stringify(s.latest_evidence,null,2);render(s)});
+fetch('/state').then(r=>r.json()).then(s=>{if(s.screenshot)$('screen').src='/artifact/'+encodeURIComponent(s.screenshot);if(s.pricing_result)$('pricing').textContent=JSON.stringify(s.pricing_result,null,2);if(s.latest_evidence)$('evidence').textContent=JSON.stringify(s.latest_evidence,null,2);if(s.evidence_status)$('pending').textContent=JSON.stringify(s.evidence_status,null,2);render(s)});
 new EventSource('/events').onmessage=e=>render(JSON.parse(e.data));
 setInterval(()=>{let t=Math.max(0,Math.floor(remaining-(Date.now()-updated)/1000));$('timer').textContent=Math.floor(t/60)+':'+String(t%60).padStart(2,'0')+' remaining'},1000);
 </script></html>"""
@@ -47,7 +53,7 @@ class Dashboard:
         app.router.add_get("/state", self.state)
         app.router.add_get("/events", self.events)
         app.router.add_get("/artifact/{name}", self.artifact)
-        self.runner = web.AppRunner(app, access_log=None)
+        self.runner = web.AppRunner(app, access_log=None, shutdown_timeout=1)
         await self.runner.setup()
         site = web.TCPSite(self.runner, "127.0.0.1", self.port)
         await site.start()

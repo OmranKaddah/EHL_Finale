@@ -61,7 +61,7 @@ class AgentAction(StrictModel):
         "navigate", "click", "fill", "select", "check", "press", "scroll", "tab", "frame",
         "observe", "wait", "screenshot", "pixel_click", "dialog", "document", "cite", "record",
         "schema", "calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan",
-        "sign", "receipt", "api_submit", "stage", "inspect_evidence", "inspect_controls",
+        "sign", "receipt", "api_submit", "stage", "inspect_evidence", "inspect_controls", "read_links",
     ]
     summary: str = Field(max_length=500, description="Brief observable purpose; no private reasoning.")
     args: dict[str, Any] = Field(default_factory=dict)
@@ -118,6 +118,8 @@ class Position(Sourced):
     packaging_key: str | None = None
     commitment_key: str | None = None
     pool_keys: list[str] = Field(default_factory=list)
+    ordinary_setup_eur: NonNegative | None = None
+    bonus_plan: str | None = None
 
 
 class Revision(Sourced):
@@ -148,6 +150,7 @@ class QA(Sourced):
     withdraws: list[str] = Field(default_factory=list, description="IDs of Q&A answers withdrawn")
     position: str | None = None
     quantity: int | None = Field(default=None, gt=0)
+    unit: Literal["pieces", "set"] | None = None
     revision: str | None = None
     requirement_id: str | None = None
     amendments: dict[str, Any] = Field(default_factory=dict)
@@ -155,6 +158,8 @@ class QA(Sourced):
     packaging_key: str | None = None
     commitment_key: str | None = None
     pool_keys: list[str] | None = None
+    ordinary_setup_eur: NonNegative | None = None
+    bonus_plan: str | None = None
 
 
 class Material(Sourced):
@@ -170,7 +175,7 @@ class Material(Sourced):
     mass_kg: NonNegative | None = None
     fixed_rate_eur_per_kg: NonNegative | None = None
     metal_index_key: str | None = None
-    ordinary_setup_eur: NonNegative
+    ordinary_setup_eur: NonNegative | None = None
     allocation_mass_kg: NonNegative | None = None
 
 
@@ -253,7 +258,8 @@ class Band(StrictModel):
 
 
 class Bonus(MailRule):
-    eligible_positions: list[str]
+    key: str | None = None
+    eligible_positions: list[str] = Field(default_factory=list)
     bands: list[Band] = Field(min_length=1)
 
 

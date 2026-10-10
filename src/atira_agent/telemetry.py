@@ -95,6 +95,8 @@ class Telemetry:
             self.state["pricing_result"] = event["result"]
         if event_kind == "evidence_added":
             self.state["latest_evidence"] = event["evidence"]
+        if event_kind == "evidence_status":
+            self.state["evidence_status"] = {"counts": event["counts"], "unresolved": event["unresolved"]}
         for queue in tuple(self.queues):
             if queue.full():
                 try:

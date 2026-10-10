@@ -28,6 +28,16 @@ def test_exact_decimal_serialization_and_total():
         validate_answer(data, {})
 
 
+def test_actual_schema_dialect_is_honored():
+    import jsonschema
+    schema = {"$schema": "http://json-schema.org/draft-07/schema#", "type": "object",
+              "dependencies": {"currency": ["required_by_runtime_schema"]}}
+    with pytest.raises(jsonschema.ValidationError):
+        validate_answer(answer(), schema)
+    with pytest.raises(jsonschema.SchemaError):
+        validate_answer(answer(), {"type": "not-a-json-type"})
+
+
 async def test_tan_replacement_invalidates_previous(telemetry):
     browser = MagicMock(act=AsyncMock(), latest_tan="old", tan_captured_at=1, observation_number=8)
     submission = Submission(context(), browser, telemetry)

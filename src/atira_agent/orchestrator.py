@@ -108,6 +108,16 @@ class Orchestrator:
 
     async def execute(self, action):
         name, args = action.action, action.args
+        if name == "read_links":
+            results = []
+            try:
+                async for observation, result in self.browser.read_links(args["refs"]):
+                    self.ledger.observe(observation)
+                    results.append(result)
+            finally:
+                self.observation = await self.browser.observe()
+                self.ledger.observe(self.observation)
+            return results
         if name == "inspect_controls":
             results = []
             try:
@@ -145,6 +155,9 @@ class Orchestrator:
                     record_data = item.get("data")
                     results.append({"kind": item.get("kind"), "id": record_data.get("id") if isinstance(record_data, dict) else None,
                                     "error": error})
+            self.telemetry.emit("evidence_status", counts={kind: len(values) for kind, values in self.ledger.records.items()},
+                                unresolved=[{"kind": x["kind"], "id": x["data"].get("id"), "error": x["error"]}
+                                            for x in self.ledger.rejected.values()])
             return results
         if name == "inspect_evidence":
             if "observation" in args:

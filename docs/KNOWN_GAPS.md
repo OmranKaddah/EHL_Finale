@@ -23,4 +23,5 @@ This file is updated from actual test/rehearsal results. Do not infer challenge 
 6. Automatic receipt recognition requires a visible tender reference and confirmation identifier; unfamiliar receipt
    layouts must still be read and mapped by the model.
 
-See the eventual rehearsal report for live run IDs, official scores and observed blockers.
+See [the rehearsal report](REHEARSAL_REPORT.md) for live run IDs, official scores and observed blockers.
+The first sandbox run exited without an answer. End-to-end live signing remains unverified despite passing mock flows.

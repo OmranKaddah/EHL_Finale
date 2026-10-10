@@ -165,6 +165,47 @@ def test_bonus_is_marginal():
     assert marginal_bonus(D(150), [Band(upper_eur=100, percent=1), Band(upper_eur=None, percent=3)]) == D("2.50")
 
 
+def test_qa_setup_override_is_position_scoped(priced_ledger):
+    priced_ledger.record("qa", dict(id="setup-change", evidence=["e1"], issued_at=DATE,
+                                   position="A", ordinary_setup_eur="4"))
+    result = calculate(priced_ledger)
+    a, b = result.answer["positions"]
+    assert a["unit_price"] == D("12.76")
+    assert b["unit_price"] == D("11.96")
+    assert result.audit[0]["ordinary_setup"] == D("4")
+
+
+def test_amended_unit_is_converted_using_current_specification(priced_ledger):
+    position = priced_ledger.all("position")[0]
+    requirement = priced_ledger.all("requirement")[0].model_copy(update={"pieces_per_set": 4})
+    amendment = QA(id="units", evidence=["e1"], issued_at=DATE, position="A", quantity=2, unit="set")
+    assert pieces(effective_position(position, [amendment]), requirement) == 8
+
+
+def test_bonus_keys_do_not_select_a_newer_unrelated_plan(priced_ledger):
+    original = priced_ledger.all("bonus")[0]
+    for pos in ("A", "B"):
+        row = priced_ledger.records["position"][pos]
+        priced_ledger.records["position"][pos] = row.model_copy(update={"bonus_plan": "PLAN-A"})
+    priced_ledger.records["bonus"][original.id] = original.model_copy(update={"key": "PLAN-A"})
+    priced_ledger.records["bonus"]["other"] = original.model_copy(update={"id": "other", "key": "PLAN-B",
+        "sent_at": DATE, "bands": [Band(upper_eur=None, percent=99)]})
+    assert calculate(priced_ledger).answer["total_net"] == D("96.07")
+
+
+def test_bonus_nonmembers_receive_zero_and_membership_conflicts_block(priced_ledger):
+    original = priced_ledger.all("bonus")[0]
+    a = priced_ledger.records["position"]["A"]
+    priced_ledger.records["position"]["A"] = a.model_copy(update={"bonus_plan": "PLAN-A"})
+    priced_ledger.records["bonus"][original.id] = original.model_copy(update={"key": "PLAN-A"})
+    assert "membership conflicts" in calculate(priced_ledger).unresolved["order"][0]
+    priced_ledger.records["bonus"][original.id] = original.model_copy(update={"key": "PLAN-A", "eligible_positions": [],
+        "bands": [Band(upper_eur=None, percent=10)]})
+    a, b = calculate(priced_ledger).answer["positions"]
+    assert a["rebate_total"] == D("3.00")
+    assert b["rebate_total"] == 0
+
+
 def test_allocation_tie_and_alternative_rules():
     weights = {"B": D(1), "A": D(1), "C": D(1)}
     assert allocate(D("0.02"), weights) == {"A": D(".01"), "B": D(".01"), "C": D(0)}

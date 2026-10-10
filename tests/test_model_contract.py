@@ -2,7 +2,8 @@ import json
 
 import pytest
 
-from atira_agent.models import parse_action
+from atira_agent.models import parse_action, parse_tool_call
+from atira_agent.tool_specs import model_tools
 
 
 def test_flat_arguments_and_missing_summary_are_normalized():
@@ -14,6 +15,19 @@ def test_flat_arguments_and_missing_summary_are_normalized():
 def test_serialized_nested_record_is_normalized():
     action = parse_action(json.dumps({"action": "record", "kind": "revision", "data": json.dumps({"id": "r"})}))
     assert action.args["data"] == {"id": "r"}
+
+
+def test_named_tool_does_not_need_a_duplicate_action_field():
+    action = parse_tool_call("fill", '{"ref":"o12-f0-e1","secret":"portal:password"}')
+    assert action.action == "fill"
+    assert action.args == {"ref": "o12-f0-e1", "secret": "portal:password"}
+    with pytest.raises(ValueError, match="conflict"):
+        parse_tool_call("fill", '{"action":"click","ref":"o1-f0-e0"}')
+
+
+def test_named_tool_schemas_cover_the_executor_contract():
+    from atira_agent.contracts import AgentAction
+    assert {x["function"]["name"] for x in model_tools()} == set(AgentAction.model_json_schema()["properties"]["action"]["enum"])
 
 
 def test_serialized_batch_and_citations_preserve_quotes():

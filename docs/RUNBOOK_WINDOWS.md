@@ -28,3 +28,6 @@ and the configuration documented in README; no script configures or uploads a pe
 
 Keep `.codex/` and `.entire/` local. Check `entire status` after commits. Do not use `entire doctor --force` to resolve
 unrelated stuck sessions; it can discard uncondensable work. No force reset, history rewrite or remote push is needed.
+On this Windows installation, Entire's commit-linking prompt opens the controlling terminal even when stdin is
+redirected. Run `git commit` in an interactive terminal and answer its link-to-session question. Verify the resulting
+`Entire-Checkpoint` trailer with `entire checkpoint list --json --no-pager`; do not disable the hook to avoid the prompt.
