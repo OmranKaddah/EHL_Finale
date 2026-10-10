@@ -7,45 +7,6 @@
 - README.md: README.md
 
 ## My request:
-Start with the easiest one and start completing them. Remember for rehearsals you need to deploy the proxy server first
-
----
-
-# Context from my IDE setup:
-
-## Active file: docs/REHEARSAL_REPORT.md
-
-## Open tabs:
-- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
-- README.md: README.md
-
-## My request:
-So what is missing to pass the test?
-
----
-
-# Context from my IDE setup:
-
-## Active file: docs/REHEARSAL_REPORT.md
-
-## Open tabs:
-- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
-- README.md: README.md
-
-## My request:
-Implement
-
----
-
-# Context from my IDE setup:
-
-## Active file: docs/REHEARSAL_REPORT.md
-
-## Open tabs:
-- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
-- README.md: README.md
-
-## My request:
 PLEASE IMPLEMENT THIS PLAN:
 # Tender-first evidence recovery
 
