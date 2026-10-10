@@ -1,0 +1,60 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KSKZZDPC67S3HB9S40ZMY4",
+  "session_id": "01a126b2-2644-74e0-b348-e27a3baeec42",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T20:56:09.729102Z",
+  "branch": "vlad",
+  "checkpoints_count": 1,
+  "save_step_count": 1,
+  "files_touched": [
+    "docs/NEXT_SESSION.md",
+    "src/rfq_agent/__main__.py",
+    "src/rfq_agent/documents.py",
+    "src/rfq_agent/loop.py",
+    "src/rfq_agent/planner.py",
+    "tests/test_debug_workflow.py",
+    "tests/test_live_navigation.py",
+    "tests/test_loop.py",
+    "tests/test_missions.py",
+    "tests/test_regressions.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6.1-sol",
+  "turn_id": "869672b409e0",
+  "checkpoint_transcript_start": 3550,
+  "transcript_lines_at_start": 3550,
+  "compact_transcript_start": 453,
+  "token_usage": {
+    "input_tokens": 47766,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 7169071,
+    "output_tokens": 17127,
+    "api_call_count": 52,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 33
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T20:56:09.435843Z",
+    "agent_lines": 223,
+    "agent_removed": 11,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 223,
+    "total_lines_changed": 234,
+    "agent_percentage": 100,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    }
+  ]
+}
