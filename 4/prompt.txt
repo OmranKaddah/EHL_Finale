@@ -1,0 +1,23 @@
+# Context from my IDE setup:
+
+## Open tabs:
+- run_5d1664ec8cea1b87.log: .rfq-artifacts/run_5d1664ec8cea1b87.log
+- browsers.html: .rfq-artifacts/navigation-probe/40efe4fd/browsers.html
+- .env.example: .env.example
+- README.md: README.md
+
+## My request:
+We want tio improve because we are still not reaching the end within 20 minutes. Would it make sense and potentially help us to use such package : [https://github.com/browser-use/browser-use](https://github.com/browser-use/browser-use)  The last run was so: [`run_1d2c09fc8c27052a`](https://ehl-challenge.atira.ai/runs/run_1d2c09fc8c27052a) failed before submission was accepted. The log indicates roughly **6½ minutes elapsed**, with about **65 seconds left** when the coordinator’s validation stalled and the run was cancelled. Times below are approximate: the agents ran in parallel, and the log doesn’t provide precise start/end timestamps for every phase.
+
+| Workstream    | Approx. time before status | Outcome                                                      |
+| ------------- | -------------------------- | ------------------------------------------------------------ |
+| Tender portal | 3m 8s                      | Reported partial results                                     |
+| Specification | 2m 32s                     | Timed out while gathering revision and specification details |
+| ERP           | 2m 47s                     | Reported partial results                                     |
+| Email         | 3m 5s                      | Reported partial results                                     |
+
+Those times overlap; they add up to more than the run’s wall time because the specialists ran concurrently. After their reports, the coordinator continued investigating and started preparing the submission. The progress tracker showed **1 of 10 milestones complete**. Calculation, entry, review, TAN request/receipt, and receipt confirmation remained.
+
+The immediate failure was submission validation: one partial submission referenced missing or empty evidence, and a later validation required an exact quote from an observed confirmation. The coordinator then stalled waiting for a model response and was cancelled with a `TimeoutError`. The submission was **not accepted**.
+
+Clef made **158 visual checks with no reported Clef failures**. Its calls totaled **334.5 seconds**, and it generated 12 recovery suggestions, of which 7 were selected. Those are accumulated service times, not additional wall time. So Clef was active, but this run still spent several minutes on incomplete data gathering and never finished the submission checks.
