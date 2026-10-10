@@ -1,4 +1,136 @@
-# Next-session handoff: rebuild the mail policy, keep the browser tools
+# Next-session handoff: finish the minimum signed bid
+
+## Resume here — session wrapped at the user's request
+
+**A diagnostic run is still active. Do not start a duplicate.**
+[Run run_7e7a499f1661e8ab](https://ehl-challenge.atira.ai/runs/run_7e7a499f1661e8ab)
+passed document-access enrollment, collected the complete position list in 14
+actions, and validated the all-omitted proposal. The latest observed log is
+`minimum bid validated; 5 positions to omit`. This verifies the enrollment fix
+on a fresh platform account; it does not establish wizard/signing success.
+
+Resume monitoring with:
+
+```sh
+atira status run_7e7a499f1661e8ab
+atira logs run_7e7a499f1661e8ab --follow
+```
+
+The existing CLI follower has tool session ID `67315` if still available. There
+is no local scouting rehearsal left running. The platform run continues remotely
+if the follower disconnects. It was intentionally left active for this handoff.
+Run metadata is in `artifacts/platform-diagnostic-v2/run.json`.
+
+Next actions, in order:
+
+1. Collect that run's final result and logs; inspect its actual review/signing UI
+   before changing guards. Do not equate a successful click with wizard progress.
+2. Verify the fresh code sequence: mailbox baseline before exactly one request,
+   a newer original TAN bound to the runtime reference, validated review, signed
+   receipt. Baseline currently has 60 seconds and retrieval 90 seconds; these
+   limits and localization of review values are still unverified bottlenecks.
+3. After a real receipt, record platform eligibility separately from quality.
+   The current diagnostic intentionally omits all positions and proves no
+   pricing/specification accuracy. Keep discount and TAN missions separate.
+4. Resume the partial-quality work in `MVP_PLAN.md` only after the signing path
+   works. Full workflow answer retention, partial-coverage handling, optional
+   breakdown validation and setup-cost allocation remain planned fixes.
+
+Preserve all uncommitted work, including untracked `docs/MVP_PLAN.md`; no commit
+was made. Default `agent.json` still runs the full workflow and the model default
+remains nano/low. The diagnostic's isolated staged manifest explicitly selects
+mini/medium and `--eligibility --steps 100`. Do not upload the repository directly:
+use `package.py`/an allowlisted staging folder. No scored publication is authorized.
+No new tests in `tests/`: this session used compilation, schema/assertion checks,
+live scouting and diagnostic platform runs. Older history below is chronological
+and can contain superseded claims; this section and the redeployment update win.
+
+## Redeployment check and registration progress — 11 October 2026
+
+Fresh scouting inputs report challenge version 6, public-1. All four supplied
+website roots returned HTTP 200 after login redirects. The platform exposed no
+deployment identifier, so reachability does not establish which build is deployed.
+Tender and mailbox authentication have succeeded; complete ERP/customer extraction
+has not been reverified. The team already has an `OPENAI_API_KEY` secret configured.
+
+Live diagnostics use `gpt-5-mini`, medium reasoning, explicitly; the default model
+and default full-workflow manifest have not changed. A focused mailbox identity
+mission succeeded, with source quotes preserved in
+`artifacts/redeploy-contact/verified`. Registration then actually advanced from
+bidder data to bid type, followed by position omission, in
+`artifacts/runs/20261011-005755-619000-eligibility`. The email was discovered from
+the authenticated bidder account, not guessed or copied into runtime code.
+That rehearsal subsequently drifted into other websites and was interrupted;
+it did **not** request a TAN or produce a signed receipt.
+
+Changes since the earlier handoff:
+
+- Bidder identity is extracted separately from bid scalars. A model-selected
+  `find_identity` mission retrieves a missing registration field with quoted
+  source support, preserving the tender form. Field meaning and native read-back
+  are checked before continuing.
+- Accessible account/profile facts can be recorded when an unrelated message
+  body remains locked; protected body content is still masked and provenance
+  checks remain in place.
+- Submission navigation is restricted to the runtime submission website.
+  Focused identity and signing helpers handle the other websites.
+- Omission proposal review checks actual runtime rules without inventing optional
+  disclaimer requirements. One earlier proposal failed only that invented
+  requirement; the corrected audit accepted it.
+- Each eligibility rehearsal preserves its own timestamped directory under
+  `artifacts/runs`, with submission observations, action history, screenshots and
+  result checkpoints. Optional `RFQ_TRACE_DIR` captures credential-redacted local
+  observations. These artifacts are excluded from the submission archive.
+
+No new tests were added. Compile/schema/targeted assertion checks passed. The
+rehearsal using `artifacts/redeploy-eligibility-v3` reached the totals form after
+all five omissions, recovered registration after session expiry, then looped on
+premature review. It was interrupted with no TAN request or receipt; checkpoints
+are in `artifacts/runs/20261011-010315-346000-eligibility/submission`.
+
+The follow-up fixes retain exact bidder identity sources by source index (rather
+than asking for a retyped quote), expose review only when all required omission
+identifiers occur in the current view, and preserve label/value word boundaries
+when validating review numbers. Inline checks and compilation passed; no tests
+were added. To verify the reported sandbox redeployment too, we started an
+authorized **diagnostic**, not scored, platform run before another local restart:
+
+- Run: `run_3ef20e834242c106`, rehearsal: `reh_a4c20dcda4161435`
+- URL: https://ehl-challenge.atira.ai/runs/run_3ef20e834242c106
+- Staged runtime only: `/private/tmp/rfq-minimum-diagnostic-20261011-011123`
+- Command: `env OPENAI_MODEL=gpt-5-mini OPENAI_REASONING_EFFORT=medium uv run --no-sync python -m rfq_agent --eligibility --steps 100`
+- Upload: 22 files, ~107 KB; no credentials, artifacts, docs or tests.
+
+The first platform run **failed** with `agent_exit`, without attempting a bid.
+Setup, supplied CDP browser, OpenAI proxy and authentication worked. The fresh
+account needed a participation acknowledgment to release documents; our access
+classifier rejected it at action 15. The investigator then wandered to unrelated
+tenders and exhausted 40 actions. The scouting account did not present this
+enrollment requirement in the local rehearsals. The access classifier now explicitly
+allows document-access enrollment without requiring a receipt/code form; signing
+and bid submission retain their separate guards. A second diagnostic is running:
+`run_7e7a499f1661e8ab` / `reh_cc49d4720945ed9c`, staged from
+`/private/tmp/rfq-minimum-diagnostic-20261011-011756`.
+That second run passed enrollment and original position-list extraction; its
+final submission result is pending at handoff.
+
+First-run evidence is in `artifacts/platform-diagnostic`: result JSON, logs and
+locally extracted recording frames. Atira's live frame feed stayed empty and its
+recorded-frame endpoint returned 502; HLS recording extraction with local ffmpeg
+worked. `recorded-03.png` shows the unlocked document-access enrollment form.
+Do not infer a site or model outage from that frame-service failure.
+Receipt/eligibility/quality remain unverified. No scored publication authorized.
+Keep TAN retrieval and discount approval verification as separate missions.
+
+## Current implementation order — 11 October 2026
+
+Follow [MVP_PLAN.md](MVP_PLAN.md) for new work. It reviews the current runtime code,
+official rules and supplied workboard, and prioritizes real registration → signed
+minimum bid → platform eligibility → verified position coverage. The user requested
+no more tests in `tests/`; use live scouting and platform rehearsals for this work.
+The review also identified answer retention, partial-coverage gates, optional-field
+validation and reported setup surcharge as concrete follow-up fixes. These are
+planned, not implemented by the review. Preserve the history below.
 
 ## Implementation update (read before the older handoff below)
 

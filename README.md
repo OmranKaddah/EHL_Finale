@@ -16,6 +16,9 @@ zero or a guessed no-bid decision. A run exits successfully only after confirmat
 This implements the workflow; it is not yet validated on the live challenge sites
 or unknown private websites. See [robustness and remaining limits](docs/ROBUSTNESS.md)
 and [architecture and runtime contract](docs/AGENT_SPEC.md).
+For the current implementation status and the diagnostic run to resume, read
+[the session handoff](docs/NEXT_SESSION.md). Local registration/omission progress
+and platform document access are verified; a signed receipt is still unconfirmed.
 
 ## Local workflow
 
@@ -70,7 +73,10 @@ OPENAI_MODEL=gpt-5-mini OPENAI_REASONING_EFFORT=medium uv run --no-sync python -
 This mode **submits a bid**. It reads the tender reference and complete position
 list, checks that the runtime brief permits omitting every position, then enters
 an all-omitted bid. It bypasses technical/pricing investigations and saves results
-under `artifacts/eligibility/`. The normal package command is unchanged. Signing
+under a unique `artifacts/runs/<timestamp>-<id>-eligibility/` directory. Earlier
+attempts are preserved. The normal package command is unchanged. Registration
+uses quoted bidder identity from the brief or a model-selected runtime source;
+missing contact details must be discovered, not invented. Signing
 captures a mailbox baseline before one request, reads a newer original code for
 the exact reference in an isolated context of the supplied browser, and verifies
 the review and signed receipt. A timed-out request is never clicked again.
@@ -138,7 +144,7 @@ through `loop.py`. The model chooses login, unlock controls,
 messages, original versions, frames and refreshes. Baselines compare highest
 observed request numbers; TAN results require current source quotes and plausible
 code syntax. Calls are deadline bounded and log actions without codes.
-These helpers are currently standalone; the full bid submission worker still
-uses its existing signing flow. Model identification of original-message provenance,
+The submission worker uses these helpers for the baseline and reference-bound
+TAN retrieval. Model identification of original-message provenance,
 human-visible code agreement, expiry handling and arrival-to-return latency need
 live validation before relying on the helpers in a scored signing flow.

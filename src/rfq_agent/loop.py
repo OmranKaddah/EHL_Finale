@@ -5,6 +5,7 @@ import json
 import os
 import hashlib
 import re
+from pathlib import Path
 from jsonschema import validate, ValidationError
 
 from . import model
@@ -91,6 +92,13 @@ class BrowserLoop:
                 # Retry observation once; never reuse targets from the failed read.
                 await asyncio.sleep(0.25)
                 observation = await asyncio.wait_for(self.session.observe(self.site_id), self.budget())
+            if os.environ.get('RFQ_TRACE_DIR'):
+                # Opt-in local diagnostics use the same credential-redacted UI
+                # observation seen by the model, never hidden site state.
+                directory = Path(os.environ['RFQ_TRACE_DIR']) / re.sub(r'[^\w-]', '_', self.phase)
+                directory.mkdir(parents=True, exist_ok=True)
+                (directory / 'latest.json').write_text(json.dumps(
+                    {'step': step, 'observation': observation}, ensure_ascii=False, indent=2))
             yield step, self.site_id, observation
 
     async def decide(self, system, content, observation, schema=None):

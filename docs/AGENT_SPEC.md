@@ -2,7 +2,9 @@
 
 The full RFQ objective remains: discover governing sources, calculate a bid,
 validate it, sign it and confirm receipt. Missing evidence is unresolved, never
-an invented zero or no-bid decision. Eligibility-only mode is not implemented.
+an invented zero or no-bid decision. Opt-in `--eligibility` discovers the complete
+position list and attempts an all-omitted signed bid only when the runtime rules
+permit it. It is a submission-path rehearsal, not verified commercial coverage.
 
 ## Runtime and browser flow
 
@@ -17,8 +19,11 @@ state, prompts, completion checks and error handling:
 
 - `planner.py`: dispatch, live action schema, DOM observation/execution, exact
   source quotes, state-scoped repetition protection and investigation progress.
-- `mail.py`: standalone request-number baseline and original signing-code retrieval.
-- `submission.py`: validated scalar entry, review, current TAN and signed receipt.
+- `mail.py`: request-number baseline and original signing-code retrieval, also
+  used by the submission worker in a separate context of the supplied browser.
+- `submission.py`: source-backed bidder identity, audited field entry/read-back,
+  review, current TAN and signed receipt. The model can discover missing bidder
+  contact details in another runtime site while retaining the form in its tab.
 
 `documents.py` maintains each worker's selected tabs, visible accessible frames,
 selected downloads and ZIP members. Message-list, reading-pane and iframe-body
@@ -55,7 +60,10 @@ Known gaps: shadow DOM, canvas-only controls, scanned PDFs, office formats,
 delayed downloads and unsupported gestures. Access guards include English/German
 terms; unfamiliar language can be rejected. Setup allocation supports largest
 remainders only. Model judgments do not prove source coverage or original-message
-provenance. The standalone mail helpers are not wired into the full signing worker.
+provenance. Source-backed registration passed locally; fresh-account document
+enrollment and position-list extraction passed in a platform diagnostic. Signing
+and platform eligibility still need end-to-end verification; see the newest entry
+in `NEXT_SESSION.md` for the active run and results.
 
 Before final submission, verify live source discovery and an accepted signed receipt,
 then evaluate held-out layouts/data without tuning to them. Vary languages, IDs,

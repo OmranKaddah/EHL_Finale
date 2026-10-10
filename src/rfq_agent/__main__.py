@@ -251,6 +251,9 @@ async def main(options=None) -> int:
 
 async def eligibility_rehearsal(task, sites, max_steps):
     """Opt-in minimum bid; keeps normal full-quality and site debug flows intact."""
+    task = dict(task)
+    prefix = f'runs/{time.strftime("%Y%m%d-%H%M%S")}-{time.time_ns() % 1000000:06d}-eligibility'
+    task['submission_artifact_dir'] = str(Path('artifacts', prefix, 'submission'))
     ledger = EvidenceLedger()
     result = {'status': 'not_attempted'}
     evidence_result = None
@@ -280,20 +283,28 @@ async def eligibility_rehearsal(task, sites, max_steps):
                                                             max_steps=min(40, max_steps))
                 print('[eligibility] validating omission permission and complete position coverage', flush=True)
                 answer, omitted = await omitted_bid(task, ledger, diagnostics=proposal_diagnostics)
-                write_artifact('eligibility/answer.json', {'answer': answer, 'omitted': omitted})
+                write_artifact(prefix + '/answer.json', {'answer': answer, 'omitted': omitted})
                 print(f'[eligibility] minimum bid validated; {len(omitted)} positions to omit', flush=True)
                 result = {'status': 'unconfirmed', 'reason': 'submission started; receipt not verified'}
                 result = await submit_on_site(task, answer, omitted, page, ledger, max_steps=max_steps)
             finally:
-                if owns: await instance.close()
+                if owns:
+                    try:
+                        await instance.close()
+                    except Exception:
+                        pass  # A teardown failure must not replace a signed result.
     except Exception as exc:
-        result = {'status': 'unconfirmed' if result.get('status') != 'not_attempted' else 'not_attempted',
-                  'error_type': type(exc).__name__,
-                  'reason': planner._safe_log_excerpt(str(exc), sites, 700)}
-    write_artifact('eligibility/evidence.json', [item.to_dict() for item in await ledger.snapshot()])
-    write_artifact('eligibility/proposals.json', proposal_diagnostics)
-    write_artifact('eligibility/workflow.json', {'investigation': evidence_result, 'submission': result})
-    print(f'Eligibility rehearsal: {result["status"]}; artifacts/eligibility', flush=True)
+        # Preserve submission history/receipt even if the browser driver fails
+        # while leaving its context manager.
+        result['error_type'] = type(exc).__name__
+        if result['status'] != 'submitted':
+            result['reason'] = planner._safe_log_excerpt(str(exc), sites, 700)
+    write_artifact(prefix + '/evidence.json', [item.to_dict() for item in await ledger.snapshot()])
+    write_artifact(prefix + '/proposals.json', proposal_diagnostics)
+    write_artifact(prefix + '/workflow.json', {'investigation': evidence_result, 'submission': result})
+    print(f'Eligibility rehearsal: {result["status"]}; artifacts/{prefix}', flush=True)
+    if result['status'] != 'submitted' and result.get('reason'):
+        print('[eligibility] ' + planner._safe_log_excerpt(str(result['reason']), sites, 500), flush=True)
     return 0 if result['status'] == 'submitted' else 1
 
 
