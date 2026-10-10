@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KD6YEGG4KB0AKK3SGW3E26",
+  "strategy": "manual-commit",
+  "branch": "fresh-start",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "README.md",
+    "scripts/run-local.ps1",
+    "src/atira_agent/cli.py",
+    "src/atira_agent/multi_agent.py",
+    "tests/test_multi_agent.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 11304,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 4580995,
+    "output_tokens": 4674,
+    "api_call_count": 24
+  }
+}
