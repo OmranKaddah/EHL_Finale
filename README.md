@@ -1,5 +1,22 @@
 # Hackathon Document Intelligence Toolkit
 
+## Atira RFQ challenge agent
+
+The repository now includes a model-directed browser agent for the RFQ challenge,
+with evidence tracking, Decimal pricing, unit tests and a sandbox package manifest.
+See [the RFQ implementation guide](docs/RFQ_AGENT.md) for installation, practice runs,
+architecture, supported rules, limitations and prioritized improvements. Live challenge
+performance has not yet been measured.
+
+```bash
+uv venv .venv
+uv pip install --python .venv/bin/python -e '.[test,rfq]'
+.venv/bin/python -m pytest -q
+.venv/bin/python scripts/package_rfq.py
+```
+
+## General-purpose toolkit
+
 A small Python toolkit for schema-based document extraction, deterministic requirement matching, optional Typesense retrieval, and deadline-aware simulation. It is designed for adapting to an unknown document challenge, not for a particular competition API.
 
 ## Install

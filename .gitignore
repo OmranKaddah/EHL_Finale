@@ -7,3 +7,5 @@ __pycache__/
 reports/
 .hackkit_uploads/
 results/
+.rfq-artifacts/
+dist/
