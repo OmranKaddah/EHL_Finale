@@ -3,7 +3,7 @@
   "checkpoint_id": "01M4KGBC9HKAS951CSRED0HE9E",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 10,
+  "checkpoints_count": 12,
   "files_touched": [
     ".env.example",
     "AGENTS.md",
@@ -15,6 +15,7 @@
     "agent.json",
     "docker-compose.yml",
     "docs/RFQ_AGENT.md",
+    "docs/RFQ_DIAGNOSIS.md",
     "examples/documents/rfq.txt",
     "examples/documents/technical_spec.md",
     "examples/documents/technical_spec.txt",
@@ -22,6 +23,7 @@
     "examples/schemas/simple_technical.json",
     "pyproject.toml",
     "scripts/package_rfq.py",
+    "scripts/probe_navigation.py",
     "src/hackathon_toolkit/__init__.py",
     "src/hackathon_toolkit/api.py",
     "src/hackathon_toolkit/benchmarks.py",
@@ -41,7 +43,10 @@
     "src/hackathon_toolkit/processing.py",
     "src/hackathon_toolkit/rag.py",
     "src/hackathon_toolkit/rfq/browser.py",
+    "src/hackathon_toolkit/rfq/clef.py",
     "src/hackathon_toolkit/rfq/runtime.py",
+    "src/hackathon_toolkit/rfq/trace.py",
+    "src/hackathon_toolkit/rfq/validation.py",
     "src/hackathon_toolkit/schemas.py",
     "src/hackathon_toolkit/search.py",
     "src/hackathon_toolkit/workflows.py",
@@ -63,6 +68,7 @@
     "tests/test_rfq_deadlines.py",
     "tests/test_rfq_package.py",
     "tests/test_rfq_runtime.py",
+    "tests/test_rfq_submission_validation.py",
     "tests/test_search_processing.py",
     "tests/test_tabular.py"
   ],
@@ -80,14 +86,21 @@
       "compact_transcript": "/1/transcript.jsonl",
       "content_hash": "/1/content_hash.txt",
       "prompt": "/1/prompt.txt"
+    },
+    {
+      "metadata": "/2/metadata.json",
+      "transcript": "/2/full.jsonl",
+      "compact_transcript": "/2/transcript.jsonl",
+      "content_hash": "/2/content_hash.txt",
+      "prompt": "/2/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 948460,
+    "input_tokens": 1186369,
     "cache_creation_tokens": 0,
-    "cache_read_tokens": 48301952,
-    "output_tokens": 130730,
-    "api_call_count": 469,
+    "cache_read_tokens": 61174272,
+    "output_tokens": 196331,
+    "api_call_count": 595,
     "subagent_tokens_complete": true
   }
 }
