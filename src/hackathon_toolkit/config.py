@@ -35,6 +35,9 @@ class Settings:
     processing_mode: str = "balanced"
     scheduling_policy: str = "earliest_deadline_first"
     log_level: str = "INFO"
+    qwen_base_url: str = "http://127.0.0.1:8765/qwen/v1"
+    qwen_model: str = "qwen"
+    clef_base_url: str = "http://127.0.0.1:8765/clef"
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -74,6 +77,9 @@ class Settings:
             processing_mode=get("PROCESSING_MODE", cls.processing_mode),
             scheduling_policy=get("SCHEDULING_POLICY", cls.scheduling_policy),
             log_level=get("LOG_LEVEL", cls.log_level),
+            qwen_base_url=get("QWEN_BASE_URL", cls.qwen_base_url),
+            qwen_model=get("QWEN_MODEL", cls.qwen_model),
+            clef_base_url=get("CLEF_BASE_URL", cls.clef_base_url),
         )
         return value
 

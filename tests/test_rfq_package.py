@@ -18,4 +18,6 @@ def test_package_is_allowlisted_and_manifest_points_to_installed_module(tmp_path
         assert not any(name.startswith(("tests/", "examples/", ".env", ".rfq-artifacts/")) for name in names)
         manifest = json.load(tar.extractfile("agent.json"))
         assert manifest["run"] == [".venv/bin/python", "-m", "hackathon_toolkit.rfq.runtime"]
-        assert manifest["browsers"] == 1
+        assert manifest["browsers"] == 4
+        assert manifest["models"] == ["qwen", "clef"]
+        assert "src/hackathon_toolkit/rfq/clef.py" in set(names)

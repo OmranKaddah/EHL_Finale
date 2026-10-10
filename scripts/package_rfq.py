@@ -6,7 +6,8 @@ import tarfile
 def build(root: Path, output: Path):
     selected = [root / name for name in ("agent.json", "pyproject.toml", "README.md", "requirements-rfq.txt",
                                        "docs/RFQ_AGENT.md")]
-    selected.extend(sorted((root / "src").rglob("*.py")))
+    selected.append(root / "src/hackathon_toolkit/__init__.py")
+    selected.extend(sorted((root / "src/hackathon_toolkit/rfq").rglob("*.py")))
     output.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(output, "w:gz") as archive:
         for path in selected:

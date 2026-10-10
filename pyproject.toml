@@ -6,27 +6,20 @@ build-backend = "hatchling.build"
 name = "hackathon-toolkit"
 version = "0.1.0"
 requires-python = ">=3.11"
-description = "Composable document intelligence and asynchronous challenge workflows"
+description = "Model-directed browser agent for the Atira RFQ-to-bid challenge"
 readme = "README.md"
 dependencies = ["pydantic>=2.8"]
 
 [project.optional-dependencies]
-llm = ["openai>=2.0"]
-search = ["httpx>=0.27"]
-http = ["httpx>=0.27"]
-matching = ["pint>=0.24"]
-api = ["fastapi>=0.115", "uvicorn>=0.30"]
-local = ["docling>=2", "gliner2[local]>=2.0"]
-office = ["python-docx>=1.1", "openpyxl>=3.1", "pymupdf>=1.24"]
 rfq = ["httpx>=0.27", "playwright>=1.49", "pymupdf>=1.24", "jsonschema>=4.23"]
-test = ["pytest>=8", "pytest-asyncio>=0.23", "hatchling", "editables", "pip", "httpx>=0.27", "fastapi>=0.115", "pint>=0.24", "openpyxl>=3.1", "jsonschema>=4.23"]
+test = ["pytest>=8", "pytest-asyncio>=0.23", "hatchling", "editables", "pip"]
 
 [project.scripts]
-hackkit = "hackathon_toolkit.cli:main"
 rfq-agent = "hackathon_toolkit.rfq.runtime:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/hackathon_toolkit"]
+exclude = ["src/hackathon_toolkit/config.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

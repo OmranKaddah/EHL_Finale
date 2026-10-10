@@ -1,4 +1,0 @@
-RFQ from Northwind Manufacturing
-We need five industrial workstations delivered by 2026-12-01.
-Each workstation must include at least 64 GB RAM and support ISO 9001.
-GPU RTX 4080 or better is preferred. Peak power must not exceed 300 W.
