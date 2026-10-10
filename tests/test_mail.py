@@ -41,6 +41,20 @@ class MailValidation(unittest.TestCase):
 
 
 class MailWorkflow(unittest.IsolatedAsyncioTestCase):
+    async def test_signing_integration_rejects_lookalike_reference(self):
+        session = AsyncMock(); session.frame = None; session.page.url = 'https://mail.test'
+        quote = 'Original SHIFTED-EXAMPLE-OTHER code 222222'
+        session.observe.return_value = {'url': 'https://mail.test', 'targets': [],
+                                        'visible_text': 'Signing request 9\n' + quote}
+        decision = {'action': 'return_mail', 'requests': [{'number': 9, 'quote': 'Signing request 9'}],
+                    'number': 9, 'source_kind': 'original', 'body_quote': quote, 'tan': '222222'}
+        with patch.object(mail, 'InvestigationSession', return_value=session), patch.object(
+                model, 'complete_with_retry', return_value=json.dumps({'decision': decision})):
+            result = await mail._run(object(), {'siteId': 'letters', 'url': 'https://mail.test'},
+                                     4, 30, False, max_steps=1, report=True, reference='SHIFTED-EXAMPLE')
+        self.assertEqual(result['status'], 'unresolved')
+        self.assertNotIn('result', result)
+
     async def test_current_code_is_not_returned_when_message_binding_is_rejected(self):
         session = AsyncMock(); session.frame = None; session.page.url = 'https://mail.test'
         session.observe.return_value = {'url': 'https://mail.test', 'targets': [],

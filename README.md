@@ -61,6 +61,21 @@ remain to be measured.
 
 The workflow can fill and sign a validated scouting bid. Scouting actions do not
 count toward a score. Runtime credentials come from Atira's payload, not `.env`.
+For an opt-in minimum-bid rehearsal:
+
+```sh
+OPENAI_MODEL=gpt-5-mini OPENAI_REASONING_EFFORT=medium uv run --no-sync python -m rfq_agent --eligibility --steps 80
+```
+
+This mode **submits a bid**. It reads the tender reference and complete position
+list, checks that the runtime brief permits omitting every position, then enters
+an all-omitted bid. It bypasses technical/pricing investigations and saves results
+under `artifacts/eligibility/`. The normal package command is unchanged. Signing
+captures a mailbox baseline before one request, reads a newer original code for
+the exact reference in an isolated context of the supplied browser, and verifies
+the review and signed receipt. A timed-out request is never clicked again.
+This is not yet proof of public eligibility or private-site reliability.
+
 Local calls default to OpenAI `gpt-5-nano` using `.env` (existing environment
 variables take precedence). Override with `OPENAI_MODEL`; GPT-5 calls use
 `OPENAI_REASONING_EFFORT=low` by default. In sandbox runs, calls use Atira's

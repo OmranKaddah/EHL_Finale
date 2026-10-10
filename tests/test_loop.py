@@ -2,10 +2,18 @@ import asyncio
 import unittest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from rfq_agent.loop import BrowserLoop
+from rfq_agent.loop import BrowserLoop, MissionProgress
 
 
 class LoopDeadline(unittest.IsolatedAsyncioTestCase):
+    async def test_rejected_evidence_can_be_corrected_without_reloading_source(self):
+        progress = MissionProgress()
+        progress.observe({'url': 'https://source.invalid', 'visible_text': 'Current quantity: 17.', 'targets': []})
+        progress.record({'action': 'record_evidence', 'quote': 'Current quantity: 18.', 'claim': 'quantity'})
+        progress.record({'action': 'record_evidence', 'quote': 'Current quantity: 17.', 'claim': 'quantity'})
+        with self.assertRaisesRegex(ValueError, 'Repeated action'):
+            progress.record({'action': 'record_evidence', 'quote': 'Current quantity: 17.', 'claim': 'renamed claim'})
+
     async def test_navigation_context_error_reobserves_once(self):
         from playwright.async_api import Error
         session = MagicMock()

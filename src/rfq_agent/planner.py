@@ -180,6 +180,13 @@ Do not reopen the site to reset an incomplete access form.
 Inspect remaining acknowledgments and continue controls after unlocking.
 
 Sources: prefer focused searches and relevant records over unrelated menus.
+Document selectors may update a separate reading pane below or beside the list
+without changing the URL or opening a tab. After selecting a relevant document,
+read the newly revealed pane before selecting another document. Inspect observed
+frames and expandable content sections; select the content frame when necessary,
+and read/scroll that pane rather than repeatedly clicking its document selector.
+Document titles alone are not evidence. An original quantity list may be amended
+elsewhere; follow the document's references to current revisions and amendments.
 The assigned investigation is your immediate goal. A visible message is not
 relevant just because it is newest or selected. When its subject does not address
 your goal, search using the runtime reference and the topic in the site's language,

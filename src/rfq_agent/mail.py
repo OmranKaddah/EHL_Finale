@@ -70,6 +70,8 @@ numbers before opening a message, retain that selection when entering its frame.
 For baseline mode return the highest request number among signing mails currently
 visible, or an empty requests list if the unlocked inbox establishes none.
 For TAN mode find the highest request number strictly greater than after. Wait for
+mail for required_tender_reference when supplied; look-alike references belong
+to different tenders. The original body must identify that exact reference.
 new mail and choose an appropriate refresh/revisit action about every three seconds;
 waiting alone may not refresh server-rendered lists. Do not reuse older requests.
 Signing codes last five minutes; reject visibly expired messages. Once a qualifying
@@ -81,7 +83,7 @@ Never output credentials or codes in notes. Do not finish or record_evidence.
 """
 
 
-async def _run(page, access, after, timeout_s, number_only, *, max_steps=1000, report=False):
+async def _run(page, access, after, timeout_s, number_only, *, max_steps=1000, report=False, reference=None):
     if after is not None and (type(after) is not int or after < 0):
         raise ValueError('after must be a nonnegative request number or None')
     if timeout_s <= 0:
@@ -122,6 +124,7 @@ async def _run(page, access, after, timeout_s, number_only, *, max_steps=1000, r
             raise TimeoutError('No productive mailbox decisions remain')
         content = json.dumps({'goal': 'baseline request number' if number_only else 'new original signing TAN',
                               'after': after, 'observation': observation, 'last_result': feedback,
+                              'required_tender_reference': reference,
                               'history': history[-10:], 'credential_keys': sites[0]['credential_keys']}, ensure_ascii=False)
         try:
             raw = await loop.decide(PROMPT, content, observation, schema)
@@ -137,6 +140,10 @@ async def _run(page, access, after, timeout_s, number_only, *, max_steps=1000, r
             if kind == 'return_mail':
                 progress.record(action)
                 value = validate_result(action, observation, after, number_only)
+                if reference is not None and not number_only:
+                    quote = clean(action.get('body_quote', ''))
+                    if not re.search(r'(?<![\w-])' + re.escape(clean(reference)) + r'(?![\w-])', quote):
+                        raise ValueError('Original body must identify the exact requested tender reference')
                 if not number_only:
                     audit_schema = {'type': 'object', 'properties': {
                         'accepted': {'type': 'boolean'}, 'reason': {'type': 'string'}},
@@ -200,3 +207,11 @@ async def latest_tan_number(page, access: dict) -> int | None:
 
 async def get_tan(page, access: dict, after: int | None = None, timeout_s: int = 90) -> str:
     return await _run(page, access, after, timeout_s, False)
+
+
+async def get_tan_for_reference(page, access: dict, reference: str,
+                                after: int | None = None, timeout_s: int = 90) -> str:
+    """Signing integration additionally binds the original code to the runtime tender."""
+    if not isinstance(reference, str) or not reference.strip():
+        raise ValueError('runtime tender reference is required')
+    return await _run(page, access, after, timeout_s, False, reference=reference)

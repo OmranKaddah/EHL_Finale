@@ -15,6 +15,7 @@ from .evidence import EvidenceLedger
 from .investigation import InvestigationState
 from .records import Unresolved
 from .submission import submit_on_site
+from .eligibility import omitted_bid
 
 
 def write_artifact(name, value):
@@ -33,9 +34,12 @@ def arguments(argv=None):
     parser.add_argument('--after', type=int, help='TAN request baseline captured before requesting a new code')
     parser.add_argument('--timeout', type=int, default=180, help='Explicit mission time budget in seconds')
     parser.add_argument('--parallel', action='store_true', help='Run full-workflow investigators concurrently; default is sequential')
+    parser.add_argument('--eligibility', action='store_true', help='Attempt a signed all-omitted bid permitted by the runtime brief; submits a bid')
     options = parser.parse_args(argv)
     if options.steps < 1: parser.error('--steps must be positive')
     if options.site and options.parallel: parser.error('--parallel cannot be combined with --site')
+    if options.eligibility and (options.site or options.parallel or options.list_sites):
+        parser.error('--eligibility is a separate submitting workflow')
     if (options.mission or options.goal) and not options.site: parser.error('--mission and --goal require --site')
     if options.mission and options.goal: parser.error('Choose --mission or --goal')
     if options.goal is not None and not options.goal.strip(): parser.error('--goal cannot be empty')
@@ -152,6 +156,8 @@ async def main(options=None) -> int:
     if options.list_sites:
         for site in sites: print(site['site_id'])
         return 0
+    if options.eligibility:
+        return await eligibility_rehearsal(task, sites, options.steps)
     if options.site:
         site = next((s for s in sites if s['site_id'] == options.site), None)
         if site is None:
@@ -241,6 +247,54 @@ async def main(options=None) -> int:
         write_artifact('workflow.json', {'investigations': results, 'state': state.snapshot(), 'submission': submission, 'failure': failure})
     print(f'Workflow outcome: {submission["status"]}; source records={len(await ledger.snapshot())}', flush=True)
     return 0 if submission['status'] == 'submitted' else 1
+
+
+async def eligibility_rehearsal(task, sites, max_steps):
+    """Opt-in minimum bid; keeps normal full-quality and site debug flows intact."""
+    ledger = EvidenceLedger()
+    result = {'status': 'not_attempted'}
+    evidence_result = None
+    proposal_diagnostics = []
+    try:
+        target = task.get('submission', {})
+        site = planner._site_for_url(target.get('url', ''), sites)
+        if target.get('kind') != 'site' or site is None:
+            raise Unresolved('eligibility rehearsal requires a runtime site submission target')
+        print('Eligibility rehearsal: discover all position identifiers, omit all, then sign once', flush=True)
+        provider, model_name, _, _ = planner.model.configuration()
+        print(f'[eligibility] model: {provider}/{model_name}; reasoning={os.environ.get("OPENAI_REASONING_EFFORT", "low")}', flush=True)
+        async with async_playwright() as pw:
+            instance, page, owns = await browser.connect(pw, 0)
+            try:
+                focused_task = dict(task, investigation_reserve=420)
+                assignment = {'site_id': site['site_id'], 'worker_id': 'eligibility',
+                              'review_completion': True,
+                              'objective': 'Find the tender matching the runtime brief on the submission website. '
+                              'Read and quote its COMPLETE position identifier list from an original document. '
+                              'This mission is ONLY the position list: the runtime brief supplies the reference, '
+                              'and the submission worker will verify it on the live review. Do not try to '
+                              'add a reference from a URL to a document quote. Do not require the reference '
+                              'and positions in one quote. No pricing, amendments, ERP, discount investigation '
+                              'or signing yet. Finish immediately once the complete identifier list is quoted.'}
+                evidence_result = await planner.run_planner(focused_task, page, assignment, ledger,
+                                                            max_steps=min(40, max_steps))
+                print('[eligibility] validating omission permission and complete position coverage', flush=True)
+                answer, omitted = await omitted_bid(task, ledger, diagnostics=proposal_diagnostics)
+                write_artifact('eligibility/answer.json', {'answer': answer, 'omitted': omitted})
+                print(f'[eligibility] minimum bid validated; {len(omitted)} positions to omit', flush=True)
+                result = {'status': 'unconfirmed', 'reason': 'submission started; receipt not verified'}
+                result = await submit_on_site(task, answer, omitted, page, ledger, max_steps=max_steps)
+            finally:
+                if owns: await instance.close()
+    except Exception as exc:
+        result = {'status': 'unconfirmed' if result.get('status') != 'not_attempted' else 'not_attempted',
+                  'error_type': type(exc).__name__,
+                  'reason': planner._safe_log_excerpt(str(exc), sites, 700)}
+    write_artifact('eligibility/evidence.json', [item.to_dict() for item in await ledger.snapshot()])
+    write_artifact('eligibility/proposals.json', proposal_diagnostics)
+    write_artifact('eligibility/workflow.json', {'investigation': evidence_result, 'submission': result})
+    print(f'Eligibility rehearsal: {result["status"]}; artifacts/eligibility', flush=True)
+    return 0 if result['status'] == 'submitted' else 1
 
 
 if __name__ == '__main__':

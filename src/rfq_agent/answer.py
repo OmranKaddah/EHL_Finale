@@ -31,7 +31,7 @@ def validate_answer(calculation, schema, tender_ids):
     if not set(ids) <= set(tender_ids): raise Unresolved('answer includes an unknown tender position')
     omitted = set(calculation['omitted'])
     if answer['decision'] == 'bid':
-        if not ids or omitted & set(ids) or set(ids) | omitted != set(tender_ids):
+        if not tender_ids or omitted & set(ids) or set(ids) | omitted != set(tender_ids):
             raise Unresolved('every bid position must be included or explicitly omitted')
     elif answer['decision'] == 'no_bid':
         if ids or answer['total_net'] != 0 or omitted: raise Unresolved('invalid no-bid answer')

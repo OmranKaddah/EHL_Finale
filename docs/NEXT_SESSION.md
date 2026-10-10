@@ -2,6 +2,101 @@
 
 ## Implementation update (read before the older handoff below)
 
+CRITICAL screenshot finding (00:19:48): the public rehearsal reached the submission
+URL but remained at bidder-data step 1. The company-name field contained EUR and
+the page reported bidder not registered. Earlier narration of configurator
+progress overstated actual advancement: validated scalar paths did not validate
+field semantics. Stopped the rehearsal at submission step 32, without a confirmed
+receipt. Current `artifacts/eligibility` records this failure. Do not call it a
+successful wizard, omission or signing run.
+
+`review_field_entry` now independently audits each selected answer/bidder field's
+label/name/row/form context against the answer path or runtime-brief quote before
+entry. Generic non-search fill on the submission site also receives this audit,
+so it cannot bypass bidder/answer checks. A currency-to-company mapping is rejected
+in the synthetic regression. The actual public fix remains unverified. Submission
+review now additionally requires ALL supplied omissions to have been marked;
+filling a header alone cannot enable review. Focused submission suite: 12 passed.
+Latest full suite: 126 tests, 121 passed, five live-model tests skipped. A separate
+real mini-medium probe with invented data rejected currency-to-company entry and
+accepted the correctly quoted company entry. This verifies the model audit on a
+synthetic mapping, not actual public registration, signing or receipt success.
+
+2026-10-11 continuation: submission now uses an observed-control structured
+decision schema. Answer paths are enumerated, read-only fields excluded, review
+requires successful entry or complete omission marking, TAN/commit/receipt actions
+are gated by state, and three consecutive malformed decisions after repair stop
+the worker. Navigation remains model-selected. Signing baseline retrieval now
+returns to observation before the request click, avoiding stale targets; only
+successful clicks/fills update entry progress.
+
+New regression tests verify selecting two documents in a separate reading frame,
+opening each disclosure, fresh content with an unchanged parent URL, rejection of
+invented answer paths/read-only targets/early commit, and target renumbering during
+mail baseline retrieval. Synthetic signing passes, but is not public success.
+
+Public diagnostics: the new submission schema removed invalid-path failures, but
+the worker tried to review source documents as a bid. Stopped and archived in
+`artifacts/archive/eligibility-premature-document-review`; review-stage restriction
+added. A subsequent rehearsal selected the position overview but rejected its
+first evidence quote, then could not repair it because MissionProgress blocked
+ALL record_evidence actions on unchanged content. Stopped and archived in
+`artifacts/archive/eligibility-quote-repair-blocked`. MissionProgress now keys
+evidence attempts by quote, permitting corrections and distinct facts while still
+blocking identical quotes (even with a changed claim). Source matching remains
+strict. A further public rehearsal is checking these corrections; do not infer
+receipt, fresh TAN timing or full-site evidence coverage from passing fixtures.
+
+Latest rehearsal update: the narrowed minimum-bid investigation collected the
+position list and the independently audited all-omitted proposal passed. The
+submission worker then repeated invalid answer paths; the rehearsal was stopped
+with status unconfirmed, without a confirmed signed receipt. Current artifacts
+are in `artifacts/eligibility`. Do not claim public signing success. Submission
+now exposes exact validated scalar paths/values, includes allowed paths in error
+feedback, and retains rejected paths in history. This correction still needs a
+public retest. The shared investigation prompt now explicitly explains document
+selectors that reveal a separate lower/adjacent reading pane, nested frames and
+disclosures. Read selected contents before switching documents; original quantities
+must not be treated as current without amendment checks. No screenshot values,
+labels or routes were added to runtime code.
+
+The latest full suite before these prompt/path diagnostics changes was 121 tests:
+116 passed, five live-model tests skipped. Platform test upload is still pending;
+the user has requested a diagnostic test run, not a scored publication.
+
+Minimum-bid integration update: opt-in `--eligibility --steps 80` discovers the
+runtime tender's complete position identifier list, builds an all-omitted bid
+only with quoted runtime permission and a source audit, validates the runtime
+schema and zero arithmetic, then calls the existing submission worker. Default
+full-workflow/package command is unchanged; this flag DOES attempt submission.
+No public identifiers or labels were added to runtime defaults. `eligibility.py`
+and `tests/test_eligibility.py` are new and must be preserved.
+
+Signing now uses a separate context within the attached browser: baseline BEFORE
+the model-selected signing request, latch before the click so a timeout cannot
+cause a second request, retrieval strictly above baseline for the exact tender
+reference, original-source audit, then tender TAN entry and fresh review before
+commit. `retrieve_tan` can retry reading the existing request. Native confirmation
+dialogs are accepted only during authorized commit. Omitted positions require
+current review quotes; bidder fields require verbatim runtime-brief quotes.
+Mailbox contexts close in finally. TAN values are absent from console logs.
+
+Latest suite: 118 tests, 113 passed, five opt-in live-model tests skipped. Synthetic
+browser signing verifies baseline-before-request ordering, runtime credentials,
+reference-bound retrieval, preserved tender form, native confirm acceptance and
+receipt. This uses mocked mailbox/model decisions and is NOT public reliability.
+
+One mini-medium scouting eligibility rehearsal FAILED BEFORE SIGNING. It collected
+the complete original position list but continued seeking a reference inside that
+document, suffered a 180-second model timeout, session recovery trouble and then
+APIConnectionError. No signing request or bid was attempted. Preserved artifacts:
+`artifacts/archive/eligibility-first`. The investigation objective was narrowed
+afterward to position IDs only; runtime brief supplies the reference and submission
+review verifies it. That prompt correction has NOT been publicly retested. Do not
+claim eligible, fresh TAN timing, or three successful rehearsals. Local package
+rebuilt, not uploaded. Next: verify public minimum-bid flow once model transport
+works, then fresh-TAN timing and repeated receipt success; keep discount separate.
+
 Portal follow-up: single-site dispatch now explicitly limits its goal to the only
 available website. Screenshot requests are bounded across incidental changes and
 are unavailable for already parsed documents. Selected documents no longer inherit

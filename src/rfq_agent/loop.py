@@ -50,6 +50,10 @@ class MissionProgress:
     def record(self, action):
         kind = action['action']
         key = (kind, action.get('target', action.get('site_id', action.get('direction', ''))))
+        if kind == 'record_evidence':
+            # A rejected quote must not prohibit a corrected quote from the same
+            # unchanged source. Identical quotes still cannot loop indefinitely.
+            key = (kind, hashlib.sha256(str(action.get('quote', '')).encode()).hexdigest())
         if key in self.attempted:
             raise ValueError('Repeated action on unchanged content; choose a different action')
         self.attempted.add(key)

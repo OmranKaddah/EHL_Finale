@@ -262,6 +262,41 @@ class RegressionTests(unittest.IsolatedAsyncioTestCase):
 
 
 class BrowserTests(unittest.IsolatedAsyncioTestCase):
+    async def test_document_selection_refreshes_separate_reading_frame(self):
+        from rfq_agent.documents import InvestigationSession
+        sites = [{'site_id': 'shifted', 'url': 'https://documents.example.test'}]
+        async def respond(route):
+            url = route.request.url
+            if url.endswith('/first'):
+                html = '<details><summary>Show source contents</summary><p>Original quantity: 17 sets.</p></details>'
+            elif url.endswith('/second'):
+                html = '<details><summary>Show source contents</summary><p>Current revision: 4. Amendments govern quantities.</p></details>'
+            else:
+                html = ('<a href="/first" target="reader">Quantity record</a>'
+                        '<a href="/second" target="reader">Requirement record</a>'
+                        '<iframe name="reader" title="Selected document content" src="/first"></iframe>')
+            await route.fulfill(content_type='text/html', body=html)
+        await self.page.route('https://documents.example.test/**', respond)
+        await self.page.goto('https://documents.example.test/main')
+        session = InvestigationSession(self.page, sites)
+        for label, expected, previous in [('Quantity record', '17 sets', None),
+                                          ('Requirement record', 'Current revision: 4', '17 sets')]:
+            obs = await session.observe('shifted')
+            target = next(t for t in obs['targets'] if t.get('text') == label)
+            await session.apply({'action': 'click', 'target': target['id']}, 'shifted')
+            obs = await session.observe('shifted')
+            await session.apply({'action': 'select_frame', 'index': obs['frames'][0]['index']}, 'shifted')
+            obs = await session.observe('shifted')
+            self.assertNotIn(expected, obs['visible_text'])
+            disclosure = next(t for t in obs['targets'] if t['tag'] == 'summary')
+            await session.apply({'action': 'click', 'target': disclosure['id']}, 'shifted')
+            obs = await session.observe('shifted')
+            self.assertIn(expected, obs['visible_text'])
+            if previous:
+                self.assertNotIn(previous, obs['visible_text'])
+            self.assertEqual(self.page.url, 'https://documents.example.test/main')
+            await session.apply({'action': 'return_to_page'}, 'shifted')
+
     async def test_verified_access_form_policy_is_temporary_and_cannot_sign(self):
         from rfq_agent.submission import ExecutionPolicy
         await self.page.set_content('<form onsubmit="event.preventDefault();document.body.dataset.released=1">'
