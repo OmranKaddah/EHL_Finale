@@ -1,0 +1,6 @@
+# Isolated development experiment; not installed by agent.json.
+browser-use==0.13.11
+httpx==0.28.1
+playwright==1.63.0
+jsonschema==4.26.0
+pymupdf==1.28.2
