@@ -232,3 +232,29 @@ async def test_dashboard_updates_and_bounds(telemetry):
             assert (await client.get(f"http://127.0.0.1:{port}/artifact/no.png")).status_code == 404
     finally:
         await dashboard.close()
+
+
+@pytest.mark.browser
+async def test_selected_tooltips_are_observed_before_the_next_hides_them(telemetry):
+    run = RunContext(challenge_id="rfq", brief="Synthetic tooltip test", access=[],
+                     submission={"kind": "site", "url": "http://localhost"}, answer_schema={})
+    browser = BrowserSession(Config(False, (), "qwen", "qwen", "http://localhost", "local"),
+                             run, telemetry, headful=False)
+    try:
+        await browser.start()
+        await browser.page.set_content('''<table>
+          <tr><td>Reply A</td><td><button onclick="document.getElementById('date').innerText='Date A: 2027-02-01'">Date</button></td></tr>
+          <tr><td>Reply B</td><td><button onclick="document.getElementById('date').innerText='Date B: 2027-02-02'">Date</button></td></tr>
+          </table><p id="date"></p>''')
+        initial = await browser.observe()
+        assert "Reply A" in initial.controls[0]["context"]
+        assert "Reply B" in initial.controls[1]["context"]
+        rows = [row async for row in browser.inspect_controls([x["ref"] for x in initial.controls])]
+        assert "Date A: 2027-02-01" in rows[0][1]["revealed_text"]
+        assert "Date B: 2027-02-02" in rows[1][1]["revealed_text"]
+        assert "Date A" not in rows[1][0].text
+        assert rows[0][0].id != rows[1][0].id
+        with pytest.raises(ValueError, match="Stale"):
+            await browser.act("click", {"ref": initial.controls[0]["ref"]})
+    finally:
+        await browser.close()

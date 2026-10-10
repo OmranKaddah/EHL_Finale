@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import difflib
 import re
 import time
 from pathlib import Path
@@ -18,8 +19,11 @@ CONTROL_INFO = """e => {
  if (!r.width || !r.height || s.visibility==='hidden' || s.display==='none') return null;
  const modal=document.querySelector('dialog[open],[role=dialog][aria-modal=true]');
  const labels=e.labels ? [...e.labels].map(x=>x.innerText).join(' ') : '';
+ const row=e.closest('tr,[role=row],li,[role=listitem],article,details');
  return {tag:e.tagName.toLowerCase(),role:e.getAttribute('role'),type:e.getAttribute('type'),
  label:e.getAttribute('aria-label')||labels||e.getAttribute('placeholder')||e.innerText||e.title||e.name||'',
+ title:e.title||null,expanded:e.getAttribute('aria-expanded')||(e.tagName==='SUMMARY'?String(e.parentElement.open):null),
+ context:row?row.innerText.slice(0,450):null,
  value:e.type==='password'?'':e.value,filled:!!e.value,href:e.href||null,checked:e.checked,disabled:e.disabled,
  blocked_by_modal:!!modal&&!modal.contains(e),inside_modal:!!modal&&modal.contains(e),
  options:e.tagName==='SELECT'?[...e.options].map(o=>({label:o.text,value:o.value})):undefined,
@@ -129,6 +133,27 @@ class BrowserSession:
         if reference not in self.refs:
             raise ValueError("Stale or unknown control reference; observe again")
         return self.refs[reference]
+
+    async def inspect_controls(self, references):
+        """Inspect a model-selected set of independent controls, observing after EVERY click."""
+        if not isinstance(references, list) or not 1 <= len(references) <= 8 or len(set(references)) != len(references):
+            raise ValueError("Select one to eight distinct currently observed controls")
+        selected = [(ref, self._ref(ref)) for ref in references]
+        before = self.last_observation
+        urls = [frame.url for frame in self.page.frames]
+        tab_count = len(self.pages)
+        for ref, element in selected:
+            if self.dialogs or len(self.pages) != tab_count or [f.url for f in self.page.frames] != urls:
+                raise ValueError("Inspection changed page/tab/dialog; observe and choose the next action")
+            if not await element.evaluate("e => e.isConnected"):
+                raise ValueError("Selected inspection control became stale; observe again")
+            await element.click(no_wait_after=True)
+            after = await self.observe()
+            additions = [line[2:] for line in difflib.ndiff(before.text.splitlines(), after.text.splitlines())
+                         if line.startswith("+ ")]
+            yield after, {"clicked_ref": ref, "observation": after.id,
+                          "revealed_text": "\n".join(additions), "dialog": after.dialog}
+            before = after
 
     async def observe(self, include_image=False) -> Observation:
         self.observation_number += 1

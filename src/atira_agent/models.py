@@ -55,6 +55,8 @@ def parse_action(payload: str) -> AgentAction:
             record(item)
     if action == "fill_answer":
         container(args, "fields", list)
+    if action == "inspect_controls":
+        container(args, "refs", list)
     return AgentAction.model_validate({"action": action, "summary": data.get("summary") or f"Execute {action}", "args": args})
 
 

@@ -8,12 +8,18 @@ hardcode site paths, crawl the entire sites, access hidden APIs, or execute code
 not today's date. Every final value must be supported by retrieved evidence and deterministic calculations.
 
 Use exactly one act tool call. summary is a short description of purpose, not a private reasoning transcript.
+Use {"action":"...","summary":"...","args":{...}}. Lists and objects must be actual JSON arrays/objects,
+not JSON strings. Every record data needs an id; attach inline citations or existing evidence IDs to each record.
 Action arguments:
  navigate: {url: an observed link or provided site URL, new_tab?:bool}
  click: {ref}; fill: {ref,text} OR {ref,secret:'siteId:username'/'siteId:password'} OR {ref,tan:true}
  select: {ref,label} OR {ref,value}; check: {ref,checked:true}; press: {ref,key:'Enter'}
  scroll: {pixels}; tab: {tab}; frame: {frame}; observe: {}; wait: {seconds<=5}; screenshot: {}
  pixel_click: {observation:current id,x,y} only with a current screenshot; dialog: {accept:bool}
+ inspect_controls: {refs:[up to 8 current control refs]} clicks model-selected independent row disclosures/tooltips
+       in order and returns newly revealed text with an observation ID after EACH click. Prefer this for a chosen
+       Q&A page's details and date buttons. It stops if the page/tab/dialog changes; never use for navigation,
+       login, form submission or signing. Cite the returned observation for each transient date/content.
  document: {id:'d...',member?:selected ZIP member,page?:1-based PDF page}; read further relevant pages as needed.
  cite: {observation:current_observation.id (e.g. 'o12', NOT a control ref),excerpt:'exact visible quote',scope:{reference,position,revision,...}}
        OR {citations:[{observation,excerpt,scope},...]}. Creates evidence IDs e1, e2, etc.
@@ -21,6 +27,8 @@ Action arguments:
  record: {kind,data,citations?:[{observation,excerpt,scope}]} OR {records:[{kind,data,citations?:[...]},...]}.
          Prefer this combined cite-and-record form: omit data.evidence when citations are supplied; the tool creates
          and attaches real evidence IDs automatically. Read per-record errors; successful records remain stored.
+         rejected_records preserves incomplete extractions separately; they NEVER enter pricing. Correct missing
+         fields (especially Q&A issued_at dates), then resubmit the whole record with the same id and valid evidence.
  inspect_evidence: {} or {observation:'o...'} to reread previously observed content.
  calculate: {partial:false/true}; prepare_submission: {partial:false/true}
  fill_answer: {fields:[{ref,path:'positions.0.unit_price',format:'de'},...]}; maps only computed answer values.
@@ -36,6 +44,9 @@ when unsure. Open all relevant pages of the selected document/result set, but av
 Aim to finish tender/Q&A discovery within about four minutes and visit the other evidence sources early enough.
 Navigation: read the controls and selected page text after each action. Refs expire on a new observation.
 Close or complete visible modal controls first; blocked_by_modal controls cannot be clicked until the modal closes.
+Repeated labels belong to different rows: read control.context and frame/ref to choose the intended control.
+Revealed dates/tooltips can disappear on the next click; record that row while its date is visible, or cite the saved
+observation that showed it. Never repeatedly toggle rows trying to make mutually exclusive popovers stay open.
 Password value is intentionally hidden: filled=true means it was entered successfully. Then click the login button;
 do not keep filling the password. Never use literal [REDACTED] as a value or credential handle.
 Use semantic labels/links in observations, not guessed URLs. Login secrets are opaque handles, never type or report

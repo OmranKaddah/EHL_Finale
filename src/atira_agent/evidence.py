@@ -16,6 +16,14 @@ class EvidenceLedger:
         self.observations: dict[str, Observation] = {}
         self.facts: dict[str, EvidenceFact] = {}
         self.records: dict[str, dict[str, Sourced]] = defaultdict(dict)
+        self.rejected: dict[tuple[str, str], dict] = {}
+        self.conflicts: list[dict] = []
+
+    def reject(self, kind: str, data: dict, error: str):
+        key = (kind, str(data.get("id", "missing-id")))
+        self.rejected[key] = {"kind": kind, "data": data, "error": error}
+        if len(self.rejected) > 50:
+            self.rejected.pop(next(iter(self.rejected)))
 
     def observe(self, observation: Observation) -> None:
         self.observations[observation.id] = observation
@@ -49,9 +57,12 @@ class EvidenceLedger:
             raise ValueError(f"Unknown evidence references: {missing}")
         old = self.records[kind].get(record.id)
         if old and old != record:
+            self.conflicts.append({"kind": kind, "id": record.id, "previous": old.model_dump(mode="json"),
+                                   "replacement": record.model_dump(mode="json")})
             self.telemetry.emit("conflict_detected", kind=kind, record_id=record.id,
                                 previous=old.model_dump(mode="json"), replacement=record.model_dump(mode="json"))
         self.records[kind][record.id] = record
+        self.rejected.pop((kind, record.id), None)
         self.telemetry.emit("record_added", kind=kind, record=record.model_dump(mode="json"))
         return record
 
@@ -62,6 +73,7 @@ class EvidenceLedger:
         return {kind: [v.model_dump(mode="json") for v in values.values()] for kind, values in self.records.items() if values}
 
     def summary(self) -> dict:
-        return {"records": self.snapshot(), "evidence": [
+        return {"records": self.snapshot(), "rejected_records": list(self.rejected.values()),
+                "extraction_replacements": self.conflicts[-20:], "evidence": [
             {"id": v.id, "scope": v.scope, "excerpt": v.excerpt[:120]} for v in self.facts.values()
         ]}

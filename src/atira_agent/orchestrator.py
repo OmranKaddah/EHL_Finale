@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import re
 from collections import deque
 
 from .contracts import RECORD_TYPES, Observation, SubmissionState
@@ -10,6 +12,16 @@ from .pricing import calculate
 from .prompts import SYSTEM
 from .submit import Submission
 from .telemetry import safe_error
+
+
+def action_signature(action, observation):
+    """Detect unchanged retries without conflating identically labelled rows or pagination."""
+    args = dict(action.args)
+    if "ref" in args:
+        control = next((x for x in observation.controls if x["ref"] == args["ref"]), {})
+        args["ref"] = (re.sub(r"^o\d+-", "", args["ref"]), control.get("label"), control.get("context"))
+    state = (observation.url, hashlib.sha256(observation.text.encode()).hexdigest())
+    return action.action, json.dumps(args, sort_keys=True, default=str), state
 
 
 class Orchestrator:
@@ -69,11 +81,7 @@ class Orchestrator:
                     self.ledger.observe(self.observation)
                 action = await self.model.decide(self.messages(), self.deadline)
                 self.telemetry.emit("model_decision", **action.model_dump(), remaining=self.deadline.remaining)
-                stable_args = dict(action.args)
-                if "ref" in stable_args:
-                    control = next((x for x in self.observation.controls if x["ref"] == stable_args["ref"]), {})
-                    stable_args["ref"] = (control.get("frame"), control.get("label"), control.get("type"))
-                signature = (action.action, json.dumps(stable_args, sort_keys=True, default=str))
+                signature = action_signature(action, self.observation)
                 self.repeat_count = self.repeat_count + 1 if signature == self.last_action else 0
                 self.last_action = signature
                 if self.repeat_count >= 3:
@@ -100,6 +108,16 @@ class Orchestrator:
 
     async def execute(self, action):
         name, args = action.action, action.args
+        if name == "inspect_controls":
+            results = []
+            try:
+                async for observation, result in self.browser.inspect_controls(args["refs"]):
+                    self.observation = observation
+                    self.ledger.observe(observation)
+                    results.append(result)
+            except (ValueError, TimeoutError) as exc:
+                results.append({"error": safe_error(exc, self.telemetry.redactor)})
+            return results
         if name == "schema":
             kinds = args.get("kinds", [args.get("kind")])
             return {kind: RECORD_TYPES[kind].model_json_schema() for kind in kinds}
@@ -111,6 +129,7 @@ class Orchestrator:
             items = args.get("records", [args])
             results = []
             for item in items:
+                data = item.get("data")
                 try:
                     data = dict(item["data"])
                     if item.get("citations"):
@@ -120,9 +139,12 @@ class Orchestrator:
                     result = self.ledger.record(item["kind"], data)
                     results.append({"kind": item["kind"], "id": result.id, "evidence": result.evidence})
                 except (ValueError, KeyError, TypeError) as exc:
+                    error = safe_error(exc, self.telemetry.redactor)
+                    if isinstance(data, dict):
+                        self.ledger.reject(item.get("kind", "unknown"), data, error)
                     record_data = item.get("data")
                     results.append({"kind": item.get("kind"), "id": record_data.get("id") if isinstance(record_data, dict) else None,
-                                    "error": safe_error(exc, self.telemetry.redactor)})
+                                    "error": error})
             return results
         if name == "inspect_evidence":
             if "observation" in args:

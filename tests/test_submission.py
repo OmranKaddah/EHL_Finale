@@ -70,3 +70,29 @@ async def test_site_submission_cannot_use_api(telemetry):
     submission.prepare(PricingResult(answer=answer()))
     with pytest.raises(ValueError, match="website"):
         await submission.api_submit("synthetic-token")
+
+
+async def test_receipt_requires_fresh_portal_observation_and_uncertain_retry_is_blocked(telemetry):
+    import time
+    from datetime import timedelta
+    browser = MagicMock(act=AsyncMock(), latest_tan="synthetic", tan_captured_at=time.monotonic())
+    submission = Submission(context(), browser, telemetry)
+    submission.prepare(PricingResult(answer=answer()))
+    old = Observation(id="o1", action_id=1, tab=0, url="http://synthetic.test", title="Receipt",
+                      text="SYN-R accepted receipt C-1")
+    submission.state = SubmissionState.TAN_REQUESTED
+    await submission.sign({"ref": "send", "reviewed": True, "omissions_confirmed": True})
+    args = {"receipt_id": "C-1", "excerpt": "accepted receipt C-1"}
+    with pytest.raises(ValueError, match="predates"):
+        submission.accept_receipt(old, args)
+    foreign = Observation(id="o2", action_id=2, tab=0, url="http://mail.test", title="Forwarded receipt", text=old.text)
+    with pytest.raises(ValueError, match="declared submission"):
+        submission.accept_receipt(foreign, args)
+    browser.last_observation = old
+    with pytest.raises(ValueError, match="Inspect the portal"):
+        await submission.request_tan({"ref": "request"})
+    browser.last_observation = Observation(id="o3", action_id=3, tab=0, url="http://synthetic.test", title="Error",
+                                           text="SYN-R: TAN invalid", observed_at=submission.signing_started_at + timedelta(seconds=1))
+    await submission.request_tan({"ref": "request"})
+    assert submission.state == SubmissionState.TAN_REQUESTED
+    assert browser.latest_tan is None

@@ -21,6 +21,8 @@ async def run(args):
     browser = model = dashboard = None
     try:
         config = Config.from_env()
+        telemetry.structured_stdout = config.sandbox
+        telemetry.debug = args.debug
         context = await load_run()
         for site in context.access:
             for value in site.credentials.values():

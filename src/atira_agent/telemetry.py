@@ -31,6 +31,7 @@ class Redactor:
             value = value.replace(secret, "[REDACTED]")
         value = re.sub(r"(?i)(/llm/(?:run|team)/)[^/\s]+", r"\1[REDACTED]", value)
         value = re.sub(r"(?i)((?:password|passwort|authorization|api[_ -]?key|cookie|token)\s*[:=]\s*)[^\s,;]+", r"\1[REDACTED]", value)
+        value = re.sub(r"(?i)\bBearer\s+[A-Za-z0-9._~+/=-]+", "Bearer [REDACTED]", value)
         value = re.sub(r"(?i)(\bTAN\b\s*(?:lautet|ist|:|=)?\s*)[0-9][0-9 -]{3,12}", r"\1[REDACTED]", value)
         return value
 
@@ -38,7 +39,7 @@ class Redactor:
         if isinstance(value, dict):
             return {str(k): v if k == "secret" and isinstance(v, str) and re.fullmatch(r"[\w-]+:(?:username|password)", v)
                     else "[REDACTED]" if re.search(
-                r"(?i)^(password|passwort|credentials|authorization|cookie|cookies|api_key|token|tan|secret|model_key)$", str(k)
+                r"(?i)^(password|passwort|credentials|authorization|cookie|cookies|(?:x[-_])?api[-_]key|token|tan|secret|model_key|(?:request_|response_)?headers)$", str(k)
             ) else self.clean(v) for k, v in value.items()}
         if isinstance(value, (list, tuple)):
             return [self.clean(v) for v in value]
@@ -54,6 +55,8 @@ class Telemetry:
         trace_dir.mkdir(parents=True, exist_ok=True)
         self.redactor = redactor
         self.console = console
+        self.structured_stdout = True
+        self.debug = False
         self.started = time.monotonic()
         self.action_id = 0
         self.tab = 0
@@ -72,7 +75,14 @@ class Telemetry:
         line = json.dumps(event, ensure_ascii=False, default=str)
         self.file.write(line + "\n")
         if self.console:
-            print(line, flush=True)
+            if self.structured_stdout:
+                print(line, flush=True)
+            elif self.debug or event_kind in {"run_started", "stage_changed", "model_decision", "tool_error",
+                    "model_error", "deadline_warning", "run_failed", "submission_state", "dashboard_started",
+                    "pricing_computed", "scouting_acknowledged", "submission_accepted"}:
+                detail = event.get("summary", event.get("error", event.get("reason", event.get("stage",
+                                   event.get("submission", event.get("url", ""))))))
+                print(f"[{event['elapsed']:7.1f}s] {event_kind}: {str(detail)[:500]}", flush=True)
         self.events.append(event)
         self.state.update(event)
         if event_kind == "stage_changed":

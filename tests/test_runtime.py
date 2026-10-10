@@ -99,6 +99,8 @@ def test_redaction_covers_nested_values_and_token_urls():
     assert "secret-value" not in text and "scout-password" not in text and "123456" not in text
     assert "other" not in text
     assert redactor.clean({"secret": "test-site:password"}) == {"secret": "test-site:password"}
+    assert redactor.clean({"headers": {"X-Api-Key": "unseen"}}) == {"headers": "[REDACTED]"}
+    assert "unseen" not in redactor.text("Bearer unseen.token.signature")
 
 
 def test_citation_must_exist_and_record_needs_evidence(ledger):
@@ -123,3 +125,13 @@ def test_telemetry_file_is_redacted(telemetry):
     telemetry.redactor.add("never-log-me")
     telemetry.emit("tool_call", arguments={"password": "never-log-me"}, message="never-log-me")
     assert "never-log-me" not in (telemetry.trace_dir / "events.jsonl").read_text()
+
+
+def test_rejected_records_stay_outside_pricing_until_corrected(ledger):
+    data = {"id": "q", "evidence": ["e1"], "quantity": 9}
+    ledger.reject("qa", data, "issued_at missing")
+    assert ledger.all("qa") == []
+    assert ledger.summary()["rejected_records"][0]["data"] == data
+    ledger.record("qa", data | {"issued_at": "2026-01-01T00:00:00Z"})
+    assert ledger.summary()["rejected_records"] == []
+    assert len(ledger.all("qa")) == 1

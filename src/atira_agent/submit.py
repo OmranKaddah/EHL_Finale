@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import re
 import time
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import httpx
 import jsonschema
 import simplejson
 
+from .browser import origin
 from .contracts import SubmissionState
 from .runtime import USER_AGENT
 
@@ -35,6 +37,7 @@ class Submission:
         self.result = None
         self.receipt = None
         self.signing_attempted_at = None
+        self.signing_started_at = None
 
     def transition(self, state):
         self.state = state
@@ -77,6 +80,14 @@ class Submission:
     async def request_tan(self, args):
         if self.result is None:
             raise ValueError("Prepare a validated answer before requesting TAN")
+        if self.state in {SubmissionState.ACCEPTED, SubmissionState.SCOUTING_ACKNOWLEDGED}:
+            raise ValueError("Submission is already accepted")
+        if self.state == SubmissionState.SIGNING_ATTEMPTED:
+            observation = self.browser.last_observation
+            if (not observation or origin(observation.url) != origin(self.run.submission.url)
+                    or self.signing_started_at is None or observation.observed_at <= self.signing_started_at
+                    or not re.search(r"(?i)(ungültig|abgelaufen|invalid|expired|validation failed|validierungsfehler)", observation.text)):
+                raise ValueError("Inspect the portal for a receipt or explicit validation failure before requesting another TAN")
         self.browser.latest_tan = None
         self.browser.tan_captured_at = None
         self.browser.tan_requested_at = time.monotonic()
@@ -94,6 +105,7 @@ class Submission:
         if not args.get("reviewed") or not args.get("omissions_confirmed"):
             raise ValueError("Review the portal values and explicit omissions before final signing")
         self.signing_attempted_at = time.monotonic()
+        self.signing_started_at = datetime.now(timezone.utc)
         self.transition(SubmissionState.SIGNING_ATTEMPTED)
         await self.browser.act("click", {"ref": args["ref"]})
         return {"attempted": True, "instruction": "Handle the confirmation dialog, then inspect the receipt. Do not repeat an uncertain signing action."}
@@ -103,6 +115,10 @@ class Submission:
             raise ValueError("No signing attempt to verify")
         if not self.result:
             raise ValueError("No prepared answer")
+        if origin(observation.url) != origin(self.run.submission.url):
+            raise ValueError("Receipt must be observed on the declared submission website")
+        if self.signing_started_at is not None and observation.observed_at <= self.signing_started_at:
+            raise ValueError("Receipt observation predates this signing attempt")
         excerpt = args["excerpt"]
         if excerpt not in observation.text:
             raise ValueError("Receipt excerpt must be present in the observed page")
