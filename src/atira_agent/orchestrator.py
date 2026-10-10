@@ -19,17 +19,19 @@ def action_signature(action, observation):
     args = dict(action.args)
     if "ref" in args:
         control = next((x for x in observation.controls if x["ref"] == args["ref"]), {})
-        args["ref"] = (re.sub(r"^o\d+-", "", args["ref"]), control.get("label"), control.get("context"))
+        args["ref"] = (re.sub(r"^(?:.*-)?o\d+-", "", args["ref"]), control.get("label"), control.get("context"))
     state = (observation.url, hashlib.sha256(observation.text.encode()).hexdigest())
     return action.action, json.dumps(args, sort_keys=True, default=str), state
 
 
 class Orchestrator:
-    def __init__(self, run, config, browser, model, telemetry, deadline, token=None):
+    def __init__(self, run, config, browser, model, telemetry, deadline, token=None, *, ledger=None,
+                 submission=None, agent_name="orchestrator", role_instruction="", research_only=False):
         self.run, self.config, self.browser, self.model = run, config, browser, model
         self.telemetry, self.deadline, self.token = telemetry, deadline, token
-        self.ledger = EvidenceLedger(telemetry)
-        self.submission = Submission(run, browser, telemetry)
+        self.ledger = ledger or EvidenceLedger(telemetry)
+        self.submission = submission or Submission(run, browser, telemetry)
+        self.agent_name, self.role_instruction, self.research_only = agent_name, role_instruction, research_only
         self.history = deque(maxlen=16)
         self.pricing = None
         self.observation = None
@@ -37,6 +39,9 @@ class Orchestrator:
         self.last_action = None
         self.repeat_count = 0
         self._warned = False
+        self.tan_callback = None
+        self.popup_classifier = None
+        self.popup_classification = None
 
     def messages(self):
         context = {
@@ -50,6 +55,10 @@ class Orchestrator:
             "calculation": self.pricing.model_dump(mode="json") if self.pricing else None,
             "recent_actions_and_results": list(self.history),
             "current_observation": self.observation.model_dump(mode="json") if self.observation else None,
+            "agent": self.agent_name,
+            "role_instruction": self.role_instruction,
+            "research_only": self.research_only,
+            "popup_classification": self.popup_classification,
         }
         content = [{"type": "text", "text": json.dumps(self.telemetry.redactor.clean(context), ensure_ascii=False, default=str)}]
         if self.browser.last_image:
@@ -79,6 +88,7 @@ class Orchestrator:
                 if self.observation is None:
                     self.observation = await asyncio.wait_for(self.browser.observe(), self.deadline.timeout(25))
                     self.ledger.observe(self.observation)
+                    self.popup_classification = await self._classify_popup(self.observation)
                 action = await self.model.decide(self.messages(), self.deadline)
                 self.telemetry.emit("model_decision", **action.model_dump(), remaining=self.deadline.remaining)
                 signature = action_signature(action, self.observation)
@@ -102,12 +112,24 @@ class Orchestrator:
                     return False
             finally:
                 self.telemetry.artifact("evidence.json", self.ledger.summary())
+        if self.research_only:
+            self.telemetry.emit("agent_complete", agent=self.agent_name, reason="research step budget reached",
+                                remaining=self.deadline.remaining)
+            return True
         self.telemetry.emit("run_failed", reason="Deadline or step limit reached without verified signed receipt",
                             submission=self.submission.state.value, remaining=self.deadline.remaining)
         return False
 
+    async def _classify_popup(self, observation):
+        if not self.popup_classifier:
+            return None
+        return await self.popup_classifier.classify(self.browser.last_image, observation)
+
     async def execute(self, action):
         name, args = action.action, action.args
+        if self.research_only and name in {"calculate", "prepare_submission", "fill_answer", "request_tan",
+                                           "capture_tan", "sign", "receipt", "api_submit"}:
+            raise ValueError("This specialist publishes evidence only; the central orchestrator owns pricing and signing")
         if name == "read_links":
             results = []
             try:
@@ -186,6 +208,8 @@ class Orchestrator:
             result = await self.submission.fill(args["fields"])
         elif name == "request_tan":
             result = await self.submission.request_tan(args)
+            if self.tan_callback:
+                await self.tan_callback(self.submission)
         elif name == "sign":
             result = await self.submission.sign(args)
         elif name == "capture_tan":
@@ -195,8 +219,12 @@ class Orchestrator:
             if self.submission.result.answer["tender_reference"] not in observation.text:
                 raise ValueError("Signing mail must visibly identify this exact tender")
             result = await self.browser.act(name, args)
+            if self.browser is not self.submission.browser and self.browser.latest_tan:
+                self.submission.browser.latest_tan = self.browser.latest_tan
+                self.submission.browser.tan_captured_at = self.browser.tan_captured_at
         else:
             result = await self.browser.act(name, args)
         self.observation = await self.browser.observe(include_image=name == "screenshot")
         self.ledger.observe(self.observation)
+        self.popup_classification = await self._classify_popup(self.observation)
         return result

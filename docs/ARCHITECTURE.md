@@ -1,11 +1,15 @@
 # Architecture
 
-The entrypoint validates configuration and runtime access, opens the redacted event stream, attaches to the supplied
-browser (or launches visible local Chromium), and starts one controller. No prior solution or starter-kit source was copied.
+The entrypoint validates configuration and runtime access, opens the redacted event stream, then starts a browserless
+coordinator and four domain specialists. Each specialist attaches exclusively to one supplied CDP browser (or, locally,
+launches one visible Chromium) and is restricted to its assigned runtime website. No prior solution or starter-kit source was copied.
 
 ## Data flow
 
-1. The browser observes visible text and controls across frames. Control handles are scoped to that observation;
+1. Tender, specification, ERP and mail specialists observe visible text and controls across their own browser frames.
+   A short browserless Qwen dispatch assigns the opaque runtime sites once; invalid or unavailable dispatch falls back
+   to a one-to-one runtime-metadata mapping. The coordinator publishes a dependency-aware role brief and shares only typed,
+   cited ledger records rather than raw histories. Control handles are scoped to that observation;
    navigation refreshes them. Popups, browser dialogs and chosen downloads become new observations.
 2. Qwen receives the sanitized brief, current observation, recent actions, record ledger and remaining budget. It
    selects one named tool, normalized into a validated `AgentAction`. This avoids a redundant nested action field;
@@ -33,15 +37,23 @@ tender positions, specifications, ERP materials/conditions, search conclusions, 
 `SubmissionState` distinguishes drafts, validated answers, TAN requested, attempted signing, scouting acknowledgment
 and accepted sandbox submission.
 
-One browser and several tabs are used. Independent parallel investigators are intentionally deferred until the
-single-controller behavior is measured. Qwen-only inference has bounded retries and deadlines; there is no automatic
-paid-provider fallback. No model-generated Python, JavaScript or shell is executed.
+Four browser-pinned specialists perform safe discovery concurrently. The ERP specialist consumes resolved requirements,
+and the mail specialist consumes the tender reference; both can still learn their site safely while those dependencies
+are pending. A failed specialist is isolated, its unresolved evidence stays explicit, and the coordinator makes a
+bounded targeted recovery pass before partial-bid policy applies. Pricing, schema validation and portal signing remain
+centralized. The tender specialist fills the portal; after it requests a TAN, the mail specialist retrieves the newest
+matching message and hands the opaque value back without logging it. Qwen-only inference has bounded retries and
+deadlines; there is no automatic paid-provider fallback. No model-generated Python, JavaScript or shell is executed.
+If two or more specialists fail before the submission reserve, the coordinator stops pursuing agent count and reuses
+the already supplied tender browser for one bounded sequential recovery pass across the runtime sites. It does not
+launch another browser or retry uncertain signing actions.
 
 ## Observability and privacy
 
-Structured events are the shared source for sandbox stdout, durable JSONL and a localhost SSE viewer. Local stdout is
-a readable timeline. Events carry run/action
-identity, time, active site and tab. Slow viewers receive a bounded queue and cannot hold up the controller.
+Structured events are the shared source for sandbox stdout, durable JSONL and a localhost SSE viewer. Every specialist
+writes an independent redacted trace directory; the browserless coordinator owns the shared ledger and pricing trace.
+The local dashboard renders four sanitized browser panels plus a merged timeline and dependency/pricing state. Events
+carry agent/run/action identity, time, active site and tab. Slow viewers receive a bounded queue and cannot hold up an agent.
 Known secrets and token-bearing URLs are redacted centrally. Screens containing login credentials/TANs are omitted;
 editable screenshot fields are masked. Raw browser profiles, cookies and Playwright trace archives are not persisted.
 Pixel actions require a fresh image and use its actual dimensions. The archive helper normalizes timestamps and

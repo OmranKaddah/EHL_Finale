@@ -7,11 +7,9 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from .browser import BrowserSession
 from .config import Config
 from .dashboard import Dashboard
-from .models import QwenClient
-from .orchestrator import Orchestrator
+from .multi_agent import MultiAgentCoordinator, benchmark_schedule
 from .runtime import Deadline, load_run
 from .telemetry import Redactor, Telemetry, configure_console, safe_error
 
@@ -20,8 +18,11 @@ async def run(args):
     started = time.monotonic()
     redactor = Redactor(value for key, value in os.environ.items() if any(x in key for x in ("KEY", "TOKEN", "PASSWORD")))
     telemetry = Telemetry(Path(args.trace_dir), redactor)
-    browser = model = dashboard = None
+    coordinator = dashboard = None
     try:
+        if args.benchmark:
+            telemetry.emit("architecture_benchmark", result=benchmark_schedule())
+            return 0
         config = Config.from_env()
         telemetry.structured_stdout = config.sandbox
         telemetry.debug = args.debug
@@ -33,30 +34,32 @@ async def run(args):
         deadline = Deadline(config.budget, config.reserve, context.expires_at if config.sandbox else None, started=started)
         telemetry.emit("run_started", mode="sandbox" if config.sandbox else "scouting", provider=config.provider,
                        model=config.model, remaining=deadline.remaining)
-        model = QwenClient(config, telemetry)
         if args.model_smoke:
+            from .models import QwenClient
+            model = QwenClient(config, telemetry)
             telemetry.emit("model_smoke", result=await model.smoke())
+            await model.close()
             return 0
+        coordinator = MultiAgentCoordinator(context, config, deadline, telemetry, Path(args.trace_dir), os.environ.get("CHALLENGE_RUN_TOKEN"))
+        await coordinator.start()
         if args.dashboard and not config.sandbox:
-            dashboard = Dashboard(telemetry, args.dashboard_port)
+            dashboard = Dashboard(coordinator.telemetries, args.dashboard_port)
             try:
                 port = await dashboard.start()
                 telemetry.emit("dashboard_started", url=f"http://127.0.0.1:{port}")
             except Exception as exc:
                 telemetry.emit("dashboard_unavailable", error=safe_error(exc, redactor))
-        browser = BrowserSession(config, context, telemetry, headful=True)
-        await browser.start()
-        controller = Orchestrator(context, config, browser, model, telemetry, deadline, os.environ.get("CHALLENGE_RUN_TOKEN"))
-        success = await controller.run_loop(max_steps=args.max_steps)
-        telemetry.artifact("summary.json", {"success": success, "submission": controller.submission.state,
-                           "receipt": controller.submission.receipt, "remaining": deadline.remaining,
-                           "input_tokens": model.input_tokens, "output_tokens": model.output_tokens})
+        failed = await coordinator.investigate(steps=max(1, min(args.max_steps, 96)))
+        success = await coordinator.calculate_and_submit(steps=max(1, args.max_steps - 96))
+        telemetry.artifact("summary.json", {"success": success, "failed_agents": failed,
+                           "submission": coordinator.submission.state, "receipt": coordinator.submission.receipt,
+                           "remaining": deadline.remaining, "benchmark": benchmark_schedule()})
         return 0 if success else 2
     except Exception as exc:
         telemetry.emit("run_failed", error=safe_error(exc, redactor))
         return 1
     finally:
-        for resource in (dashboard, browser, model):
+        for resource in (dashboard, coordinator):
             if resource:
                 try:
                     await asyncio.wait_for(resource.close(), timeout=2)
@@ -74,6 +77,7 @@ def main():
     parser.add_argument("--dashboard", action="store_true")
     parser.add_argument("--dashboard-port", type=int, default=int(os.environ.get("ATIRA_DASHBOARD_PORT", "8787")))
     parser.add_argument("--model-smoke", action="store_true")
+    parser.add_argument("--benchmark", action="store_true", help="Report a deterministic dependency-scheduling baseline comparison")
     parser.add_argument("--max-steps", type=int, default=450)
     args = parser.parse_args()
     return asyncio.run(run(args))

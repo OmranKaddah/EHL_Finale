@@ -31,7 +31,7 @@ class EvidenceLedger:
     def cite(self, observation_id: str, excerpt: str, scope: dict | None = None) -> EvidenceFact:
         # A control reference unambiguously identifies its originating observation. Accept that spelling,
         # but still require the exact excerpt to exist in that observation's visible text.
-        control = re.fullmatch(r"(o\d+)-f\d+-e\d+", observation_id)
+        control = re.fullmatch(r"(.+)-f\d+-e\d+", observation_id)
         if control:
             observation_id = control.group(1)
         if observation_id not in self.observations:

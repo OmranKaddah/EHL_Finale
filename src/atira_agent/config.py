@@ -16,6 +16,9 @@ class Config:
     model_key: str
     budget: float = 1200
     reserve: float = 180
+    clef_url: str | None = None
+    clef_key: str | None = None
+    clef_model: str = "clef"
 
     @classmethod
     def from_env(cls, env=None) -> "Config":
@@ -61,4 +64,18 @@ class Config:
         reserve = float(env.get("ATIRA_SUBMISSION_RESERVE", 180))
         if budget <= 0 or not 0 < reserve < budget:
             raise ValueError("Require 0 < submission reserve < budget <= 1200 seconds")
-        return cls(sandbox, tuple(urls), provider, model, base, key, budget, reserve)
+        clef_url, clef_key = env.get("CLEF_BASE_URL"), env.get("CLEF_API_KEY")
+        if bool(clef_url) != bool(clef_key):
+            raise ValueError("CLEF_BASE_URL and CLEF_API_KEY must be supplied together")
+        if clef_url:
+            clef = urlsplit(clef_url)
+            if not clef.hostname or clef.username or clef.password:
+                raise ValueError("Invalid Clef proxy URL")
+            if sandbox:
+                proxy = env.get("LLM_PROXY_URL", "").rstrip("/")
+                if not proxy or not clef_url.startswith(proxy + "/"):
+                    raise ValueError("Clef endpoint must be inside the supplied Atira run proxy")
+            elif clef.hostname not in {"localhost", "127.0.0.1", "::1"}:
+                raise ValueError("Local mode uses the Atira localhost Clef proxy")
+        return cls(sandbox, tuple(urls), provider, model, base, key, budget, reserve, clef_url, clef_key,
+                   env.get("ATIRA_CLEF_MODEL", "clef"))

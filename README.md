@@ -58,14 +58,18 @@ changes team settings, or enables a paid model. A scored submission requires the
 
 ## Runtime
 
-`agent.json` installs the frozen runtime dependencies and runs `agent.py`. The sandbox connects to supplied CDP
-Chromium, never launches another browser, and reads the task/schema/fresh credentials from the current-run API.
-Local mode requires `CHALLENGE_SCOUTING` and launches visible Chromium. Site addresses and tender values are never
-compiled into application code. The browser's request filter permits only runtime site origins.
+`agent.json` installs the frozen runtime dependencies and runs `agent.py`. The sandbox connects exclusively to four
+supplied CDP Chromium instances, never launches another browser, and reads the task/schema/fresh credentials from the
+current-run API. A browserless coordinator assigns one runtime site to each tender, specifications, ERP and mail
+specialist. Local mode requires `CHALLENGE_SCOUTING` and launches four visible Chromium instances. Site addresses and+tender values are never compiled into application code. Each browser's request filter permits only its assigned runtime+origin (the tender browser also accesses the declared submission origin).
 
 Qwen uses `QWEN_BASE_URL` and `QWEN_API_KEY` from Atira. No personal OpenAI key is needed. Optional OpenAI-compatible
 paid-provider configuration requires both `ATIRA_MODEL_PROVIDER=openai` and `ATIRA_ALLOW_PAID=1`, an explicit model,
 and an Atira proxy endpoint. Do not enable it without approval. Merely having a key does not activate paid inference.
+
+When Atira supplies `CLEF_BASE_URL` and `CLEF_API_KEY`, Clef classifies only sanitized screenshots that look like a
+blocking popup or visual gate. Its result is advisory context for Qwen; it never clicks controls, navigates, solves a
+CAPTCHA, or receives a credential/TAN screenshot.
 
 Configuration: `ATIRA_BUDGET_SECONDS` (maximum 1200), `ATIRA_SUBMISSION_RESERVE` (default 180),
 `ATIRA_DASHBOARD_PORT` (default 8787). Sandbox platform expiry is an additional hard bound. Local scouting credential
@@ -73,7 +77,8 @@ expiry is not the run timer. `--max-steps` limits debugging rehearsals; use the 
 
 ## Implementation and evidence
 
-- `src/atira_agent/orchestrator.py`: observation-conditioned actions, evidence, deadline policy.
+- `src/atira_agent/multi_agent.py`: dependency-aware four-specialist scheduling, shared evidence, TAN handoff and benchmark.
+- `src/atira_agent/orchestrator.py`: observation-conditioned specialist actions and bounded failure recovery.
 - `src/atira_agent/business_rules.py` and `pricing.py`: dated scope, exact matches, Decimal calculations and allocations.
 - `src/atira_agent/browser.py` and `submit.py`: generic visible browser operations, TAN and receipt states.
 - `src/atira_agent/telemetry.py` and `dashboard.py`: redacted durable events and a nonblocking local viewer.
@@ -82,3 +87,9 @@ See [architecture](docs/ARCHITECTURE.md), [official contract](docs/ATIRA_CONTRAC
 [debugging](docs/DEBUGGING.md), [Windows runbook](docs/RUNBOOK_WINDOWS.md), and [known gaps](docs/KNOWN_GAPS.md).
 The [rehearsal report](docs/REHEARSAL_REPORT.md) records actual commands, tests, run IDs, results and artifacts.
 Passing unit tests is not a live signed bid.
+
+Run the offline architecture comparison without credentials or browser startup:
+
+```powershell
+uv run python agent.py --benchmark
+```

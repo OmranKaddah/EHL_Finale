@@ -41,11 +41,16 @@ def origin(url: str) -> tuple:
 
 
 class BrowserSession:
-    def __init__(self, config, run, telemetry, *, headful=True):
+    def __init__(self, config, run, telemetry, *, headful=True, browser_index=0, agent_id="",
+                 assigned_site=None, allow_submission=False):
         self.config, self.run, self.telemetry = config, run, telemetry
         self.headful = headful
-        self.allowed = {origin(x.url) for x in run.access}
-        self.allowed.add(origin(run.submission.url))
+        self.browser_index, self.agent_id = browser_index, agent_id
+        self.assigned_site, self.allow_submission = assigned_site, allow_submission
+        scoped_access = [x for x in run.access if assigned_site is None or x.siteId == assigned_site]
+        self.allowed = {origin(x.url) for x in scoped_access}
+        if allow_submission:
+            self.allowed.add(origin(run.submission.url))
         self.playwright = self.browser = self.context = None
         self.pages = []
         self.tab = 0
@@ -65,7 +70,7 @@ class BrowserSession:
         self.last_screenshot = 0.0
         self.last_image = None
         self.last_image_size = None
-        for site in run.access:
+        for site in scoped_access:
             for key, value in site.credentials.items():
                 self.secret_values[f"{site.siteId}:{key}"] = (value, origin(site.url))
                 telemetry.redactor.add(value)
@@ -73,7 +78,10 @@ class BrowserSession:
     async def start(self):
         self.playwright = await async_playwright().start()
         if self.config.cdp_urls:
-            self.browser = await self.playwright.chromium.connect_over_cdp(self.config.cdp_urls[0], timeout=20000)
+            if self.browser_index >= len(self.config.cdp_urls):
+                raise RuntimeError(f"Browser {self.browser_index + 1} was not supplied by the runtime")
+            self.browser = await self.playwright.chromium.connect_over_cdp(
+                self.config.cdp_urls[self.browser_index], timeout=20000)
             self.context = self.browser.contexts[0] if self.browser.contexts else await self.browser.new_context()
         else:
             if self.config.sandbox:
@@ -96,6 +104,18 @@ class BrowserSession:
             await route.continue_()
         else:
             await route.abort()
+
+    def expand_to_run_access(self):
+        """Emergency coordinator fallback: reuse this supplied browser sequentially.
+
+        This never creates a fifth browser and is invoked only after multiple
+        specialists fail before the submission reserve.
+        """
+        for site in self.run.access:
+            self.allowed.add(origin(site.url))
+            for key, value in site.credentials.items():
+                self.secret_values[f"{site.siteId}:{key}"] = (value, origin(site.url))
+        self.telemetry.emit("browser_scope_expanded", reason="multi_agent_failure_fallback")
 
     def _register_page(self, page):
         if page in self.pages:
@@ -208,7 +228,7 @@ class BrowserSession:
         self.last_image = None
         self.last_image_size = None
         self.observation_number += 1
-        oid = f"o{self.observation_number}"
+        oid = f"{self.agent_id + '-' if self.agent_id else ''}o{self.observation_number}"
         self.refs = {}
         controls, frames, texts = [], [], []
         if not self.dialogs:
@@ -369,7 +389,8 @@ class BrowserSession:
             if self.tan_requested_at is None:
                 raise ValueError("Request a signing TAN first")
             observation_id = args.get("observation", "")
-            if not re.fullmatch(r"o\d+", observation_id) or int(observation_id[1:]) <= self.tan_request_observation:
+            suffix = re.search(r"-?o(\d+)$", observation_id)
+            if not suffix or int(suffix.group(1)) <= self.tan_request_observation:
                 raise ValueError("Read the newly requested signing message; cached TAN observations are invalid")
             raw = self.raw_text.get(observation_id, "")
             matches = list(TAN_PATTERN.finditer(raw))

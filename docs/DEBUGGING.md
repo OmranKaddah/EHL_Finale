@@ -1,12 +1,15 @@
 # Debugging
 
-Start the Atira model proxy in one PowerShell terminal, then run `scripts/run-local.ps1` in another. Chromium is
-visible. Open <http://127.0.0.1:8787> for stage, countdown, page, sanitized screenshots, actions, evidence and pricing.
+Start the Atira model proxy in one PowerShell terminal, then run `scripts/run-local.ps1` in another. Four Chromium
+windows are visible. Open <http://127.0.0.1:8787> for the tender, specifications, ERP and mail panels, merged timeline,
+dependency state, sanitized screenshots, evidence and pricing.
 The dashboard is local-only and is disabled in sandbox mode. A port collision is logged without stopping the agent.
 
 `--trace-dir artifacts/name` chooses an ignored trace directory. It contains:
 
-- `events.jsonl`: ordered redacted events and observations, including tool failures and model usage.
+- `events.jsonl`: coordinator events, shared evidence and pricing.
+- `tender/events.jsonl`, `specifications/events.jsonl`, `erp/events.jsonl`, `mail/events.jsonl`: ordered redacted
+  specialist events and observations, including tool failures and model usage.
 - `evidence.json`: latest typed record ledger with quoted source references.
 - `pricing.json`: last deterministic answer/diagnostic result and audit.
 - `receipt.json`: only created after verified receipt.

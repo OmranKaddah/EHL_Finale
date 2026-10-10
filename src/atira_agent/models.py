@@ -123,5 +123,30 @@ class QwenClient:
         return {"model": self.config.model, "reply": response.choices[0].message.content,
                 "usage": response.usage.model_dump() if response.usage else None}
 
+    async def assign_specialists(self, brief: str, sites: list[dict], fallback: dict[str, str]) -> dict[str, str]:
+        """Use Qwen to assign opaque runtime sites to the four fixed responsibilities.
+
+        The result is validated against the runtime inventory and falls back to a
+        deterministic mapping if the small dispatch call is unavailable.
+        """
+        prompt = {"task": "Assign the four supplied websites to tender, specifications, erp and mail specialists.",
+                  "brief": self.telemetry.redactor.text(brief), "sites": sites,
+                  "return": {"tender": "siteId", "specifications": "siteId", "erp": "siteId", "mail": "siteId"}}
+        try:
+            reply = await self.client.chat.completions.create(
+                model=self.config.model, messages=[{"role": "user", "content": json.dumps(prompt, ensure_ascii=False)}],
+                response_format={"type": "json_object"}, temperature=0, max_tokens=300,
+            )
+            value = json.loads((reply.choices[0].message.content or "{}"))
+            valid = {site["id"] for site in sites}
+            if set(value) != set(fallback) or set(value.values()) != valid:
+                raise ValueError("invalid assignment")
+            self.telemetry.emit("specialist_dispatch", assignments=value, method="qwen")
+            return value
+        except Exception as exc:
+            self.telemetry.emit("specialist_dispatch", assignments=fallback, method="validated_fallback",
+                                error=type(exc).__name__)
+            return fallback
+
     async def close(self):
         await self.client.close()

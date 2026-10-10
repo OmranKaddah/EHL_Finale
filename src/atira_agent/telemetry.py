@@ -49,8 +49,10 @@ class Redactor:
 
 
 class Telemetry:
-    def __init__(self, trace_dir: Path, redactor: Redactor, run_id: str | None = None, console=True):
+    def __init__(self, trace_dir: Path, redactor: Redactor, run_id: str | None = None, console=True,
+                 agent: str = "orchestrator"):
         self.run_id = run_id or uuid.uuid4().hex[:12]
+        self.agent = agent
         self.trace_dir = trace_dir
         trace_dir.mkdir(parents=True, exist_ok=True)
         self.redactor = redactor
@@ -69,7 +71,7 @@ class Telemetry:
     def emit(self, event_kind: str, **data) -> dict:
         event = self.redactor.clean({
             "timestamp": datetime.now(timezone.utc).isoformat(), "run_id": self.run_id,
-            "action_id": self.action_id, "tab": self.tab, "site": self.site,
+            "action_id": self.action_id, "tab": self.tab, "site": self.site, "agent": self.agent,
             "elapsed": round(time.monotonic() - self.started, 3), "event": event_kind, **data,
         })
         line = json.dumps(event, ensure_ascii=False, default=str)

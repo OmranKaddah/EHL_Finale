@@ -88,3 +88,17 @@ Entire also retained an earlier degraded-capture warning; the listed checkpoints
 No live signed receipt is verified. Complete the current scouting run and evaluate the corrected package again.
 Do not describe passing mocked tests or zero-quality failed runs as an
 accepted sandbox submission. The 180-second reserve remains an initial setting until real signing duration is measured.
+
+## Multi-agent rebuild status
+
+The prior two sandbox attempts and public scouting traces above predate the four-browser architecture. The current
+implementation uses a browserless coordinator, four CDP-pinned specialists and a shared cited ledger. Each specialist
+writes a separate trace; the local dashboard renders four sanitized browser panels. Qwen dispatches opaque runtime
+site assignments and each specialist remains model-directed inside its assigned browser. Clef may classify a sanitized
+probable popup as advisory context only; it never chooses an action or solves a verification gate.
+
+The new architecture has passed local synthetic/unit regression tests and an offline dependency-scheduling comparison.
+It has **not** yet been exercised in public scouting or an unscored sandbox run. The benchmark is a schedule model,
+not a claim about live Qwen latency: sequential 490 seconds, dependency-aware parallel 305 seconds under the declared
+synthetic durations. When two specialists fail before the reserve, the coordinator runs one bounded sequential
+recovery pass using an existing supplied browser.
