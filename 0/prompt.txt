@@ -1,0 +1,244 @@
+We are finishing the hackaton challange. We need to try the test submission to see if it works. First read '/Users/vladmoroshan/Desktop/Repos/EHL_Finale/docs/MVP_PLAN.md' and '/Users/vladmoroshan/Desktop/Repos/EHL_Finale/docs/NEXT_SESSION.md' Let's switch '/Users/vladmoroshan/Desktop/Repos/EHL_Finale/agent.json' to use qwen, and then run test submission. DO you knwo the necessary commund to run test submission to Atira?
+
+---
+
+use chatgpt nano then if qwen is taking so long to reach. Also my teammate has managed to get 37 score out of 100. Here is the test run Score
+Quality
+37.4 / 100
+
+Eligible
+Yes
+
+The right tender reference.
+
+Score breakdown
+Your answer and its points, part by part. The expected values stay hidden.
+
+Part
+Your answer
+Points
+Decision
+✓
+Decision
+Your answer:bid
+Points:5 / 5
+Tender
+✓
+Tender reference
+Your answer:VG-2027-7093
+Points:5 / 5
+Items
+Points:12.35 / 65
+Item 01.01
+Points:1.95 / 13
+✗
+Material
+Your answer:HZ-8405
+Points:0 / 2.6
+✓
+Quantity
+Your answer:25
+Points:1.95 / 1.95
+✗
+Base price per piece (EUR)
+Your answer:2.38
+Points:0 / 1.95
+✗
+Surcharge per piece (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Packaging per piece (EUR)
+Your answer:2.12
+Points:0 / 1.3
+✗
+Project bonus for item (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Unit price (EUR)
+Your answer:4.38
+Points:0 / 1.3
+✗
+Lead time (weeks)
+Your answer:3
+Points:0 / 1.3
+Item 01.02
+Points:3.25 / 13
+✗
+Material
+Your answer:HZ-8405
+Points:0 / 2.6
+✓
+Quantity
+Your answer:29
+Points:1.95 / 1.95
+✗
+Base price per piece (EUR)
+Your answer:2.38
+Points:0 / 1.95
+✗
+Surcharge per piece (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Packaging per piece (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Project bonus for item (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Unit price (EUR)
+Your answer:4.62
+Points:0 / 1.3
+✓
+Lead time (weeks)
+Your answer:3
+Points:1.3 / 1.3
+Item 01.03
+Points:1.95 / 13
+✗
+Material
+Your answer:HZ-8405
+Points:0 / 2.6
+✓
+Quantity
+Your answer:16
+Points:1.95 / 1.95
+✗
+Base price per piece (EUR)
+Your answer:2.38
+Points:0 / 1.95
+✗
+Surcharge per piece (EUR)
+Your answer:5.31
+Points:0 / 1.3
+✗
+Packaging per piece (EUR)
+Your answer:2.5
+Points:0 / 1.3
+✗
+Project bonus for item (EUR)
+Your answer:0
+Points:0 / 1.3
+✗
+Unit price (EUR)
+Your answer:5.31
+Points:0 / 1.3
+✗
+Lead time (weeks)
+Your answer:3
+Points:0 / 1.3
+Item 01.04
+Points:3.25 / 13
+✗
+Material
+Your answer:HZ-8405
+Points:0 / 2.6
+✓
+Quantity
+Your answer:21
+Points:1.95 / 1.95
+✗
+Base price per piece (EUR)
+Your answer:2.38
+Points:0 / 1.95
+✗
+Surcharge per piece (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Packaging per piece (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Project bonus for item (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Unit price (EUR)
+Your answer:4.63
+Points:0 / 1.3
+✓
+Lead time (weeks)
+Your answer:3
+Points:1.3 / 1.3
+Item 01.05
+Points:1.95 / 13
+✗
+Material
+Your answer:HZ-1609
+Points:0 / 2.6
+✓
+Quantity
+Your answer:130
+Points:1.95 / 1.95
+✗
+Base price per piece (EUR)
+Your answer:270.57
+Points:0 / 1.95
+✗
+Surcharge per piece (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Packaging per piece (EUR)
+Your answer:1.02
+Points:0 / 1.3
+✗
+Project bonus for item (EUR)
+Your answer:Not given
+Points:0 / 1.3
+✗
+Unit price (EUR)
+Your answer:257.04
+Points:0 / 1.3
+✗
+Lead time (weeks)
+Your answer:2
+Points:0 / 1.3
+Total
+✗
+Net total (EUR)
+To the cent, and the sum of your items.
+Your answer:33840.87
+Points:0 / 5
+✓
+Arithmetic
+Every item, and a total that is their sum.
+Your answer:33840.87
+Points:5 / 5
+Discount
+✓
+Discount (%)
+Your answer:5
+Points:5 / 5
+Additional checks
+✓
+Withdrawn Q&A answer
+The quantity of the position whose latest change was withdrawn.
+Your answer:130
+Points:5 / 5
+✗
+Metal index for the scenario date
+The surcharge per piece of every position with a metal surcharge.
+Your answer:null, null, 5.31, null, null
+Points:0 / 5. Here is the source code '/Users/vladmoroshan/Downloads/Adira-run_f05251da9da4734c' Review the results and the source code. What can we learn? Our submission is superior, but we need to finally make it work
+
+---
+
+you are stuck in a infinity loop
+
+---
+
+LET'S TRY TEST SUBMISSION For fucking sake
+
+---
+
+Why did you add def validate_identity_value(item) function inside src/rfq_agent/submission.py file? It may work for public submission, bit if private submission has fields with different names, it will fail
+
+---
+
+run a new test run with qwen
