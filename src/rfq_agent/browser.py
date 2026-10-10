@@ -38,5 +38,7 @@ async def connect(playwright, number: int = 0):
         browser = await playwright.chromium.launch(headless=os.environ.get("HEADLESS") == "1")
         context = await browser.new_context()
         owns_browser = True
-    page = context.pages[0] if context.pages else await context.new_page()
+    # A dedicated tab prevents workers from mutating the same initial CDP page,
+    # including when multiple endpoint aliases reach one browser.
+    page = await context.new_page()
     return browser, page, owns_browser

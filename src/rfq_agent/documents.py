@@ -3,6 +3,7 @@
 from io import BytesIO
 from pathlib import Path
 from zipfile import ZipFile
+from tempfile import TemporaryDirectory
 
 MAX_FILE_BYTES = 8 * 1024 * 1024
 
@@ -39,6 +40,7 @@ def parse_document(data: bytes, name: str) -> str:
 class InvestigationSession:
     def __init__(self, page, sites):
         self.page = page
+        self.tabs = [page]
         self.sites = sites
         self.frame = None
         self.document = None
@@ -46,6 +48,9 @@ class InvestigationSession:
         self.source_url = None
         self.offset = 0
         self.page_offset = 0
+        self.policy = None
+        self.notes = []
+        self.history = []
 
     async def observe(self, site_id):
         from .planner import observe, MAX_PAGE_TEXT, _credential_values
@@ -58,12 +63,27 @@ class InvestigationSession:
             observation.update(visible_text=text, url=self.source_url, title=self.document_name,
                                targets=[], document_offset=self.offset, document_length=len(self.document))
         observation['selected_archive_members'] = self.archive.namelist() if self.archive else []
-        observation['tabs'] = [{'index': i, 'url': tab.url} for i, tab in enumerate(self.page.context.pages) if self.allowed(tab.url)]
-        observation['frames'] = [
-            {'index': i, 'url': frame.url, 'name': frame.name}
-            for i, frame in enumerate(self.page.frames)
-            if frame != self.page.main_frame and self.allowed(frame.url)
-        ]
+        observation['selected_tab'] = self.tabs.index(self.page)
+        observation['selected_frame'] = self.page.frames.index(self.frame) if self.frame in self.page.frames else None
+        observation['in_document'] = self.document is not None
+        observation['tabs'] = [{'index': i, 'url': tab.url} for i, tab in enumerate(self.tabs) if tab != self.page and not tab.is_closed() and self.allowed(tab.url)]
+        observation['frames'] = []
+        for i, frame in enumerate(self.page.frames):
+            if frame == self.page.main_frame or frame == self.frame or not self.allowed(frame.url):
+                continue
+            try:
+                element = await frame.frame_element()
+                metadata = await element.evaluate('''el => {
+                  const r=el.getBoundingClientRect(), s=getComputedStyle(el);
+                  return {visible:r.width>0 && r.height>0 && s.display!=='none' && s.visibility!=='hidden',
+                    locked:Boolean(el.closest('fieldset[disabled],[aria-disabled="true"]')),
+                    title:el.getAttribute('title') || el.getAttribute('aria-label') || '',
+                    context:(el.parentElement?.innerText || '').slice(0,500)};
+                }''')
+                if metadata['visible'] and await element.is_visible() and not metadata['locked']:
+                    observation['frames'].append(dict(index=i, url=frame.url, name=frame.name, **metadata))
+            except Exception:
+                continue  # A detached frame is not a current navigation target.
         return observation
 
     def allowed(self, url):
@@ -84,7 +104,7 @@ class InvestigationSession:
             return site_id, 'selected text offset on the current page or document'
         if kind == 'select_tab':
             index = action.get('index')
-            tabs = self.page.context.pages
+            tabs = self.tabs
             if not isinstance(index, int) or not 0 <= index < len(tabs) or not self.allowed(tabs[index].url):
                 raise ValueError('select a tab index from the current observation')
             self.page = tabs[index]
@@ -98,6 +118,9 @@ class InvestigationSession:
             frame = self.page.frames[index]
             if not self.allowed(frame.url):
                 raise ValueError('frame outside the website allowlist')
+            element = await frame.frame_element()
+            if not await element.is_visible() or await element.evaluate("el => Boolean(el.closest('fieldset[disabled],[aria-disabled=\"true\"]'))"):
+                raise ValueError('frame is hidden or its parent section is locked')
             self.page_offset = 0
             self.frame = frame
             return site_id, 'selected frame'
@@ -122,7 +145,7 @@ class InvestigationSession:
         self.page_offset = 0
         if kind != 'click':
             if kind == 'open_site': self.frame = self.document = self.archive = None
-            return await _apply(action, self.frame or self.page, self.sites, site_id)
+            return await _apply(action, self.frame or self.page, self.sites, site_id, policy=self.policy)
         origin = self.page
         downloads = []; popups = []
         on_download = lambda item: downloads.append(item)
@@ -130,7 +153,7 @@ class InvestigationSession:
         origin.on('download', on_download)
         origin.on('popup', on_popup)
         try:
-            result = await _apply(action, self.frame or self.page, self.sites, site_id)
+            result = await _apply(action, self.frame or self.page, self.sites, site_id, policy=self.policy)
             if popups:
                 popup = popups[-1]
                 await popup.wait_for_load_state('domcontentloaded', timeout=10000)
@@ -138,15 +161,17 @@ class InvestigationSession:
                     await popup.close()
                     raise ValueError('selected popup outside the website allowlist')
                 self.page = popup; self.frame = None
+                self.tabs.append(popup)
                 result = (site_id, 'opened the selected link in its new tab')
             if downloads:
                 download = downloads[-1]
                 if not self.allowed(download.url): raise ValueError('download outside the website allowlist')
-                path = await download.path()
-                if not path: raise ValueError('download did not produce a readable file')
-                file = Path(path)
-                if file.stat().st_size > MAX_FILE_BYTES: raise ValueError('download exceeds reading limit')
-                data = file.read_bytes()
+                # save_as works for remote/CDP browsers; path() can be unavailable.
+                with TemporaryDirectory(prefix='rfq-selected-') as directory:
+                    file = Path(directory, 'selected-download')
+                    await download.save_as(file)
+                    if file.stat().st_size > MAX_FILE_BYTES: raise ValueError('download exceeds reading limit')
+                    data = file.read_bytes()
                 self.source_url = download.url
                 self.offset = 0
                 self.document_name = download.suggested_filename

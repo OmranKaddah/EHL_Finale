@@ -2,5 +2,5 @@
   "setup": ["uv", "sync"],
   "run": ["uv", "run", "--no-sync", "python", "-m", "rfq_agent"],
   "browsers": 4,
-  "models": ["qwen"]
+  "models": []
 }

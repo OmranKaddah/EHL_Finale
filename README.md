@@ -1,28 +1,25 @@
-# Atira RFQ planning agent
+# Atira RFQ agent
 
-This repository contains the first MVP of an agent for the Atira RFQ challenge.
-It asks Qwen to assign focused investigations across sites supplied by the current
-run, then runs those investigators concurrently in up to four browsers. Each
-investigator chooses its next action from its live page observation. The workers
-share a source-quoted evidence ledger in memory.
+The agent reads the runtime brief and website access, builds an evidence checklist,
+and assigns model-directed investigations across up to four browsers. Investigators
+choose their own controls, searches, pages and documents from live observations.
+A coordinator audits normalized evidence, identifies gaps, and assigns follow-up
+work without assuming that facts stay on the same website across scenarios.
 
-It deliberately stops before calculating or submitting a bid. It is a planning
-and evidence-gathering foundation, not a competition-ready solver. The challenge
-requires the model to choose navigation and relevant documents at run time; the
-MVP does not crawl all sites or use copied public-scenario answers.
+Deterministic modules resolve dates, authority, revisions, withdrawn answers and
+material matches, then calculate prices with Decimal. Complete and explicitly
+partial answers pass the runtime schema and independent arithmetic checks before
+the submission worker enters the configurator, verifies the actual review, handles
+the current TAN, and confirms a signed receipt. Missing evidence does not become a
+zero or a guessed no-bid decision. A run exits successfully only after confirmation.
 
-## Project layout
+This implements the workflow; it is not yet validated on the live challenge sites
+or unknown private websites. See [robustness and remaining limits](docs/ROBUSTNESS.md)
+and [architecture and runtime contract](docs/AGENT_SPEC.md).
 
-- `agent.json` is the Atira package manifest and remains at the archive root.
-- `src/rfq_agent/` contains the Python package; see [the architecture specification](docs/AGENT_SPEC.md).
-- `uv.lock` pins the local and sandbox dependencies.
-- `.env` is not used for challenge credentials or model calls and must remain private.
+## Local workflow
 
-## Local scouting workflow
-
-The package requests four browsers and uses `min(site count, browsers provided, 4)`
-investigators. Start `atira models proxy` in one terminal and leave it running. In
-another terminal:
+Put `OPENAI_API_KEY` in your local `.env`, then:
 
 ```sh
 uv sync
@@ -31,34 +28,102 @@ eval "$(atira scout --challenge rfq --env)"
 uv run --no-sync python -m rfq_agent
 ```
 
-The scouting logins are for local development only; actions there do not count as
-a scored bid. The agent reads credentials from the run environment and never
-includes their values in model prompts or routine output.
+Console output contains one short line per browser action plus progress and errors.
+Investigators run sequentially by default. To debug a website independently:
 
-## Package workflow
+```sh
+uv run --no-sync python -m rfq_agent --list-sites
+uv run --no-sync python -m rfq_agent --site erp --steps 60
+uv run --no-sync python -m rfq_agent --site mail --steps 60
+uv run --no-sync python -m rfq_agent --site mail --mission discount --steps 60 --timeout 180
+uv run --no-sync python -m rfq_agent --site mail --mission baseline --timeout 60
+uv run --no-sync python -m rfq_agent --site mail --mission tan --after <baseline-number> --timeout 90
+```
 
-The challenge runner uses the root `agent.json`, installs with `uv sync`, and runs
-`python -m rfq_agent`. A test run or submission is a separate step; inspect the
-agent behavior and current Atira run status before starting one.
+Use the exact IDs printed by `--list-sites`. Single-site mode stays within that
+website and stops after investigation, without normalization or bid submission.
+Its evidence and action history are saved under `artifacts/sites/<site-id>/`;
+each site has separate files. To run the full workflow concurrently, use
+`uv run --no-sync python -m rfq_agent --parallel`.
 
-## Exploration output and validation
+`--site` alone derives a goal from the brief; it does **not** mean TAN retrieval.
+Explicit missions bypass dispatch and save separate results under
+`artifacts/sites/<site-id>/<mission>/`. Capture the baseline **before** requesting
+a new code through the tender portal; then pass that number with `--after`.
+TAN mode without a baseline cannot establish freshness after a new request.
+Codes are saved only in local result artifacts, never printed in action logs.
+`--goal 'your explicit objective'` bypasses dispatch for a generic investigation.
+All these modes are non-submitting. Discount mode requires quoted percentage,
+reference, sender, date, conditions and authority, plus a semantic applicability
+audit; unknown facts remain unresolved. An audit is model judgment, not a proof
+of complete mailbox coverage. Private-layout and public end-to-end reliability
+remain to be measured.
 
-Workers allow up to 120 model actions within an 18-minute local budget and the
-run deadline, reserving 90 seconds. Transient model failures get bounded retries.
-The final report separates completed, blocked, exhausted, and failed workers;
-an incomplete exploration exits with a nonzero status. Evidence is retained in
-full and exported to `artifacts/evidence.json` (ignored by Git).
+The workflow can fill and sign a validated scouting bid. Scouting actions do not
+count toward a score. Runtime credentials come from Atira's payload, not `.env`.
+Local calls default to OpenAI `gpt-5-nano` using `.env` (existing environment
+variables take precedence). Override with `OPENAI_MODEL`; GPT-5 calls use
+`OPENAI_REASONING_EFFORT=low` by default. In sandbox runs, calls use Atira's
+`LLM_PROXY_URL/openai/v1` and the `OPENAI_API_KEY` team secret. Never upload `.env`.
+Sandbox runs attach only to provided CDP browsers. To use hosted Qwen locally,
+start `atira models proxy` and set `RFQ_MODEL_PROVIDER=qwen`; for Qwen submissions,
+also set `agent.json`'s `models` to `["qwen"]` to request its warm-up.
 
-The model can select observed frames, read a clicked download (PDF, CSV, text,
-JSON, XML, or HTML), select a member of a downloaded ZIP, and page document text.
-ZIP members are never extracted onto disk. File reads are limited to 8 MB;
-unsupported formats are reported to the planner. Navigation remains model-directed.
+## Validation and artifacts
 
-Run regression tests with `.venv/bin/python -m unittest discover -s tests -v`.
-Browser tests use synthetic pages and require locally installed Chromium.
+```sh
+uv run --no-sync python -m unittest discover -s tests -v
+```
 
-See [distribution-shift robustness](docs/ROBUSTNESS.md) for implemented adaptation
-mechanisms, known interface gaps, and the workflow and held-out validation still
-needed before final submission. The planner can now select dropdown options,
-request masked screenshots, switch observed tabs, read later page text offsets,
-and retain investigation notes without treating them as evidence.
+Tests use invented scenarios and synthetic browser pages, including a mocked-model
+TAN-to-receipt flow and renamed/reordered scenario variants. Browser tests require
+locally installed Chromium. They verify mechanics and formulas, not live model
+navigation quality or private-site coverage.
+
+The opt-in integration test calls the real configured model against four locally
+simulated websites and checks concurrent login and source evidence collection:
+
+```sh
+RFQ_LIVE_MODEL_TEST=1 uv run --no-sync python -m unittest discover -s tests -p test_live_navigation.py -v
+```
+
+These tests incur model charges and use only invented website data. They cover
+four concurrent logins, an image-rendered receipt with a slider and acknowledgment,
+and a mailbox with separate message-list, reading-pane, and iframe-body gates. Observations
+group verification controls by section and expose native disclosure controls.
+Links and disclosures inside disabled fieldsets are blocked until their section
+unlocks, and protected text is withheld from evidence observations while locked.
+
+The workflow shares a 20-minute deadline, capped by the actual platform deadline,
+and reserves time for source audit and submission. Investigations run in short
+rounds while retaining browser state and notes. `artifacts/` contains selected
+source evidence, normalized records, the gap checklist, validated answer, pricing
+audit, investigator history, and final submission outcome. It is ignored by Git
+and must be excluded from uploaded packages, along with `.env`, `.venv`, and caches.
+Tests are never imported by runtime code; their invented data is not a fallback.
+
+Dispatch allows up to 360 seconds; investigation calls allow up to 180 seconds,
+within the shared deadline. Failures record phase/error type in
+`artifacts/workflow.json`. Keep the Atira proxy running when using hosted Qwen.
+
+`agent.json` stays at the package root. Setup installs dependencies with `uv sync`;
+the run command executes `python -m rfq_agent`. No test or scored run is launched
+by the local test suite.
+
+Build an upload archive with `uv run --no-sync python -m rfq_agent.package`.
+This writes `dist/agent.tar.gz` containing only runtime Python files, `agent.json`,
+`pyproject.toml` and `uv.lock`. It excludes local keys, artifacts, documentation,
+tests and caches, and checks the compressed size limit. See the
+[guidelines audit](docs/COMPLIANCE.md) for findings and remaining validation.
+
+`rfq_agent.mail` provides `latest_tan_number(page, access)` and
+`get_tan(page, access, after=None, timeout_s=90)` for an already supplied browser
+and one runtime access entry. It uses the shared observation/action loop
+through `loop.py`. The model chooses login, unlock controls,
+messages, original versions, frames and refreshes. Baselines compare highest
+observed request numbers; TAN results require current source quotes and plausible
+code syntax. Calls are deadline bounded and log actions without codes.
+These helpers are currently standalone; the full bid submission worker still
+uses its existing signing flow. Model identification of original-message provenance,
+human-visible code agreement, expiry handling and arrival-to-return latency need
+live validation before relying on the helpers in a scored signing flow.

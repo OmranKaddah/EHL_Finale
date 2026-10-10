@@ -7,7 +7,7 @@ name = "atira-rfq-planner"
 version = "0.1.0"
 description = "Model-directed planning MVP for the Atira RFQ challenge"
 requires-python = ">=3.12"
-dependencies = ["openai==2.54.0", "playwright==1.63.0", "pypdf>=6,<7"]
+dependencies = ["openai==2.54.0", "playwright==1.63.0", "pypdf>=6,<7", "jsonschema>=4.23,<5", "python-dotenv>=1,<2"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rfq_agent"]
