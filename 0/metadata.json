@@ -1,0 +1,217 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KGBC9HKAS951CSRED0HE9E",
+  "session_id": "01a1250d-cda8-7610-b0e8-d9b8158f63fb",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T18:14:07.818888886Z",
+  "branch": "main",
+  "checkpoints_count": 9,
+  "save_step_count": 8,
+  "files_touched": [
+    ".env.example",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "HACKATHON_QUICKSTART.md",
+    "LIBRARY_AUDIT.md",
+    "LIBRARY_USAGE.md",
+    "README.md",
+    "agent.json",
+    "docker-compose.yml",
+    "docs/RFQ_AGENT.md",
+    "examples/documents/rfq.txt",
+    "examples/documents/technical_spec.md",
+    "examples/documents/technical_spec.txt",
+    "examples/matching.json",
+    "examples/schemas/simple_technical.json",
+    "pyproject.toml",
+    "scripts/package_rfq.py",
+    "src/hackathon_toolkit/__init__.py",
+    "src/hackathon_toolkit/api.py",
+    "src/hackathon_toolkit/benchmarks.py",
+    "src/hackathon_toolkit/cache.py",
+    "src/hackathon_toolkit/cli.py",
+    "src/hackathon_toolkit/config.py",
+    "src/hackathon_toolkit/demos.py",
+    "src/hackathon_toolkit/embeddings.py",
+    "src/hackathon_toolkit/extraction.py",
+    "src/hackathon_toolkit/ingestion.py",
+    "src/hackathon_toolkit/matching.py",
+    "src/hackathon_toolkit/models.py",
+    "src/hackathon_toolkit/observability.py",
+    "src/hackathon_toolkit/output.py",
+    "src/hackathon_toolkit/parsing.py",
+    "src/hackathon_toolkit/pipeline.py",
+    "src/hackathon_toolkit/processing.py",
+    "src/hackathon_toolkit/rag.py",
+    "src/hackathon_toolkit/rfq/browser.py",
+    "src/hackathon_toolkit/rfq/runtime.py",
+    "src/hackathon_toolkit/schemas.py",
+    "src/hackathon_toolkit/search.py",
+    "src/hackathon_toolkit/workflows.py",
+    "tests/test_api.py",
+    "tests/test_backend_routing.py",
+    "tests/test_benchmarks.py",
+    "tests/test_cache_wrappers.py",
+    "tests/test_config_schema.py",
+    "tests/test_demo_rfq.py",
+    "tests/test_library_composition.py",
+    "tests/test_library_packaging.py",
+    "tests/test_matching.py",
+    "tests/test_observability.py",
+    "tests/test_offline_retrieval.py",
+    "tests/test_output.py",
+    "tests/test_pipeline.py",
+    "tests/test_rag.py",
+    "tests/test_rfq_browser_smoke.py",
+    "tests/test_rfq_deadlines.py",
+    "tests/test_rfq_package.py",
+    "tests/test_rfq_runtime.py",
+    "tests/test_search_processing.py",
+    "tests/test_tabular.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-sol",
+  "turn_id": "541344338f57",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 887961,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 47937536,
+    "output_tokens": 127374,
+    "api_call_count": 459,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 11
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T18:14:07.746401097Z",
+    "agent_lines": 1432,
+    "agent_removed": 4310,
+    "human_added": 26215,
+    "human_modified": 23,
+    "human_removed": 0,
+    "total_committed": 27670,
+    "total_lines_changed": 31980,
+    "agent_percentage": 17.954971857410882,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 4431,
+      "user_lines_removed": 19,
+      "agent_lines_added": 12,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "agent.json": 1,
+        "docs/RFQ_AGENT.md": 16,
+        "src/hackathon_toolkit/config.py": 6,
+        "src/hackathon_toolkit/rfq/clef.py": 120,
+        "src/hackathon_toolkit/rfq/runtime.py": 62,
+        "tests/test_rfq_package.py": 2,
+        "tests/test_rfq_runtime.py": 54,
+        "uv.lock": 3857
+      },
+      "user_removed_per_file": {
+        "agent.json": 1,
+        "docs/RFQ_AGENT.md": 10,
+        "src/hackathon_toolkit/rfq/runtime.py": 8
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 4290,
+      "user_lines_removed": 0,
+      "agent_lines_added": 153,
+      "agent_lines_removed": 19,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "src/hackathon_toolkit/rfq/clef.py": 120,
+        "uv.lock": 3857
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 4290,
+      "user_lines_removed": 0,
+      "agent_lines_added": 153,
+      "agent_lines_removed": 19,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "src/hackathon_toolkit/rfq/clef.py": 120,
+        "uv.lock": 3857
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 4290,
+      "user_lines_removed": 0,
+      "agent_lines_added": 236,
+      "agent_lines_removed": 21,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "src/hackathon_toolkit/rfq/clef.py": 120,
+        "uv.lock": 3857
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 4290,
+      "user_lines_removed": 0,
+      "agent_lines_added": 236,
+      "agent_lines_removed": 21,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "src/hackathon_toolkit/rfq/clef.py": 120,
+        "uv.lock": 3857
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 4290,
+      "user_lines_removed": 0,
+      "agent_lines_added": 236,
+      "agent_lines_removed": 21,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "src/hackathon_toolkit/rfq/clef.py": 120,
+        "uv.lock": 3857
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 357,
+      "user_lines_removed": 4,
+      "agent_lines_added": 4586,
+      "agent_lines_removed": 4295,
+      "user_added_per_file": {
+        ".claude/settings.json": 84,
+        ".codex/hooks.json": 88,
+        ".gemini/settings.json": 141,
+        "docs/RFQ_AGENT.md": 7,
+        "src/hackathon_toolkit/rfq/browser.py": 23,
+        "src/hackathon_toolkit/rfq/runtime.py": 3,
+        "tests/test_rfq_browser_smoke.py": 11
+      },
+      "user_removed_per_file": {
+        "docs/RFQ_AGENT.md": 1,
+        "src/hackathon_toolkit/rfq/browser.py": 2,
+        "src/hackathon_toolkit/rfq/runtime.py": 1
+      }
+    }
+  ]
+}
