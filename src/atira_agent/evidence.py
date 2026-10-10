@@ -77,3 +77,22 @@ class EvidenceLedger:
                 "extraction_replacements": self.conflicts[-20:], "evidence": [
             {"id": v.id, "scope": v.scope, "excerpt": v.excerpt[:120]} for v in self.facts.values()
         ]}
+
+    def model_context(self, *, max_evidence: int = 24) -> dict:
+        """Return the bounded shared context needed for the next model action.
+
+        Durable artifacts retain the complete ledger.  A page-level decision
+        needs cited records and a small recent fact index, not every historic
+        excerpt.  Bounding this avoids turning a long Q&A investigation into a
+        slow cross-agent prompt while preserving `inspect_evidence` for any
+        older observation.
+        """
+        return {
+            "records": self.snapshot(),
+            "rejected_records": list(self.rejected.values())[-12:],
+            "extraction_replacements": self.conflicts[-8:],
+            "evidence": [
+                {"id": v.id, "scope": v.scope, "excerpt": v.excerpt[:120]}
+                for v in list(self.facts.values())[-max_evidence:]
+            ],
+        }

@@ -135,3 +135,11 @@ def test_rejected_records_stay_outside_pricing_until_corrected(ledger):
     ledger.record("qa", data | {"issued_at": "2026-01-01T00:00:00Z"})
     assert ledger.summary()["rejected_records"] == []
     assert len(ledger.all("qa")) == 1
+
+
+def test_model_context_bounds_old_evidence_but_keeps_the_full_record_set(ledger):
+    for index in range(30):
+        ledger.cite("fixture", "Synthetic records explicitly supplied for testing.", {"n": str(index)})
+    context = ledger.model_context(max_evidence=5)
+    assert len(context["evidence"]) == 5
+    assert context["evidence"][0]["scope"] == {"n": "25"}

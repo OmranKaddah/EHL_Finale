@@ -50,6 +50,12 @@ async def run(args):
             except Exception as exc:
                 telemetry.emit("dashboard_unavailable", error=safe_error(exc, redactor))
         failed = await coordinator.investigate(steps=max(1, min(args.max_steps, 96)))
+        if args.research_only:
+            telemetry.artifact("summary.json", {"success": False, "research_only": True,
+                               "failed_agents": failed, "remaining": deadline.remaining,
+                               "benchmark": benchmark_schedule()})
+            telemetry.emit("research_complete", failed_agents=failed, remaining=deadline.remaining)
+            return 0
         success = await coordinator.calculate_and_submit(steps=max(1, args.max_steps - 96))
         telemetry.artifact("summary.json", {"success": success, "failed_agents": failed,
                            "submission": coordinator.submission.state, "receipt": coordinator.submission.receipt,
@@ -78,6 +84,7 @@ def main():
     parser.add_argument("--dashboard-port", type=int, default=int(os.environ.get("ATIRA_DASHBOARD_PORT", "8787")))
     parser.add_argument("--model-smoke", action="store_true")
     parser.add_argument("--benchmark", action="store_true", help="Report a deterministic dependency-scheduling baseline comparison")
+    parser.add_argument("--research-only", action="store_true", help="Investigate and publish evidence without calculating or submitting")
     parser.add_argument("--max-steps", type=int, default=450)
     args = parser.parse_args()
     return asyncio.run(run(args))

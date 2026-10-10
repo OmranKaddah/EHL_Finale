@@ -37,6 +37,8 @@ Terminal 2, from the project directory:
 atira scout --env | Out-String | Invoke-Expression
 uv run python agent.py --model-smoke
 .\scripts\run-local.ps1
+# Evidence-only scouting: never calculate, request a TAN, or submit.
+.\scripts\run-local.ps1 -ResearchOnly -MaxSteps 180
 ```
 
 Watch the visible Chromium window and [local dashboard](http://127.0.0.1:8787).

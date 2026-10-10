@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 from collections import deque
+from urllib.parse import urljoin, urlsplit
 
 from .contracts import RECORD_TYPES, Observation, SubmissionState
 from .evidence import EvidenceLedger
@@ -51,7 +52,7 @@ class Orchestrator:
             "submission_target": self.run.submission.model_dump(), "answer_schema": self.run.answer_schema,
             "remaining_seconds": round(self.deadline.remaining), "reserve_seconds": self.deadline.reserve,
             "submission_due": self.deadline.submission_due, "stage": self.stage,
-            "submission_state": self.submission.state, "evidence_ledger": self.ledger.summary(),
+            "submission_state": self.submission.state, "evidence_ledger": self.ledger.model_context(),
             "calculation": self.pricing.model_dump(mode="json") if self.pricing else None,
             "recent_actions_and_results": list(self.history),
             "current_observation": self.observation.model_dump(mode="json") if self.observation else None,
@@ -136,6 +137,8 @@ class Orchestrator:
 
     async def execute(self, action):
         name, args = action.action, action.args
+        if self.research_only and self._targets_submission(name, args):
+            raise ValueError("Evidence-only mode cannot enter the declared submission path")
         if self.research_only and name in {"calculate", "prepare_submission", "fill_answer", "request_tan",
                                            "capture_tan", "sign", "receipt", "api_submit"}:
             raise ValueError("This specialist publishes evidence only; the central orchestrator owns pricing and signing")
@@ -237,3 +240,30 @@ class Orchestrator:
         self.ledger.observe(self.observation)
         self.popup_classification = await self._classify_popup(self.observation)
         return result
+
+    def _targets_submission(self, name, args) -> bool:
+        """Keep an evidence-only pass away from the runtime-declared bid path."""
+        target = self.run.submission.url.rstrip("/")
+        if name == "navigate":
+            candidate = urljoin(self.observation.url, str(args.get("url", ""))).rstrip("/")
+            # Some site submissions declare only the portal origin.  That
+            # origin is also needed to log in and investigate, so only a
+            # declared non-root path is an exact block; otherwise use generic
+            # submission semantics in the observed destination.
+            return self._submission_url(candidate, target)
+        if name != "click" or not self.observation:
+            return False
+        control = next((item for item in self.observation.controls if item["ref"] == args.get("ref")), None)
+        if not control:
+            return False
+        candidate = urljoin(self.observation.url, control.get("href") or "").rstrip("/")
+        visible = " ".join(str(control.get(key) or "") for key in ("label", "context")).casefold()
+        return self._submission_url(candidate, target) or bool(re.search(r"\b(?:submit|submission|offer|bid|angebot|abgabe)\b", visible))
+
+    @staticmethod
+    def _submission_url(candidate: str, target: str) -> bool:
+        target_path = re.sub(r"/+", "/", urlsplit(target).path).rstrip("/")
+        candidate_path = re.sub(r"/+", "/", urlsplit(candidate).path).rstrip("/")
+        if target_path:
+            return candidate.startswith(target)
+        return bool(re.search(r"/(?:submit|submission|offer|bid|angebot|abgabe)(?:/|$)", candidate_path, re.I))

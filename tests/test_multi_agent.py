@@ -5,6 +5,7 @@ from atira_agent.config import Config
 from atira_agent.contracts import RunContext
 from atira_agent.dashboard import Dashboard
 from atira_agent.multi_agent import assign_sites, benchmark_schedule
+from atira_agent.orchestrator import Orchestrator
 from atira_agent.popup_classifier import PopupClassifier
 from atira_agent.telemetry import Redactor, Telemetry
 
@@ -75,3 +76,17 @@ def test_failure_fallback_reuses_a_supplied_browser_without_launching(telemetry)
     browser.expand_to_run_access()
     assert origin("https://mail.test") in browser.allowed
     assert "mail:password" in browser.secret_values
+
+
+def test_research_only_blocks_the_runtime_declared_submission_path(telemetry):
+    run = RunContext(challenge_id="rfq", brief="fixture", access=[],
+                     submission={"kind": "site", "url": "https://tender.test/bid"}, answer_schema={})
+    controller = Orchestrator(run, Config(False, (), "qwen", "qwen", "http://localhost", "local"), None,
+                              None, telemetry, None, research_only=True)
+    controller.observation = type("Observation", (), {"url": "https://tender.test/list", "controls": [
+        {"ref": "o1-f0-e1", "href": "https://tender.test/bid"}
+    ]})()
+    assert controller._targets_submission("navigate", {"url": "/bid"})
+    assert controller._targets_submission("click", {"ref": "o1-f0-e1"})
+    assert not controller._targets_submission("navigate", {"url": "/questions"})
+    assert not controller._targets_submission("navigate", {"url": "https://tender.test"})

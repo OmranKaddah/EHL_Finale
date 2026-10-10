@@ -28,7 +28,7 @@ ROLE_HINTS = {
     "mail": ("mail", "inbox", "email", "postfach", "archive"),
 }
 ROLE_INSTRUCTIONS = {
-    "tender": "Own only the assigned tender portal. Resolve the tender reference, positions, current Q&A, amendments, keys and deadline. Publish cited tender, position and Q&A records. Do not calculate or submit during investigation.",
+    "tender": "Own only the assigned tender portal. Resolve the tender reference, positions, current Q&A, amendments, keys and deadline. After identifying the tender, finish the model-selected Q&A pages: expand relevant answers, reveal each issued date, follow pagination, and record withdrawals/amendments before spending turns on optional documents. Publish cited tender, position and Q&A records. Do not calculate or submit during investigation.",
     "specifications": "Own only the assigned specification/customer portal. Resolve the current revision, complete requirements, engineering attributes, certification and governing units. Publish cited revision and requirement records. Wait for tender/Q&A facts when scope is ambiguous.",
     "erp": "Own only the assigned ERP portal. First learn safe search/navigation, then use published requirements to select exact active materials and publish cited material, search and price records. Never infer a missing match from an incomplete search.",
     "mail": "Own only the assigned mailbox. First learn inbox/archive access. Once the tender reference is published, find authorized dated messages and publish cited approval, FX, index, packaging, pool, bonus, commercial, technical and commitment records. TANs remain secret.",

@@ -88,7 +88,10 @@ class QwenClient:
                     reply = await self.client.chat.completions.create(
                         model=self.config.model, messages=messages, tools=model_tools(),
                         tool_choice="required",
-                        parallel_tool_calls=False, temperature=0.1, max_tokens=6000,
+                        # Each turn must return one small, validated tool call.
+                        # A large completion allowance needlessly increases
+                        # latency while specialists are traversing paginated UI.
+                        parallel_tool_calls=False, temperature=0.1, max_tokens=1200,
                     )
                 usage = reply.usage
                 if usage:
