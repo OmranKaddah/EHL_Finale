@@ -1,0 +1,33 @@
+we are working on hackaton. REad docs/NEXT_SESSION.md REad '/Users/vladmoroshan/Downloads/VG-2027-7093 Workboard.pdf' What next should we do?
+
+---
+
+proceed
+
+---
+
+continue
+
+---
+
+continue
+
+---
+
+continue with the docs/NEXT_SESSION.md
+
+---
+
+let's do test submission? Maybe it will work? Or is it too early? Tbh, i don't even understand what should be extracted from these 4 websites. These 4 websites are shitty and cryptic on purpose, to make the crawl as hard as possible, so i am even sure that the running agent is extracting the relevant info from these websites.
+
+---
+
+Here are the relevent screenshots. [Image #1] [Image #2] [Image #3] You have to click on each position (e.g. LEistungbeschreibung) and read the field below
+
+---
+
+continue with fixing it
+
+---
+
+review the relevant screenshot '/Users/vladmoroshan/Desktop/Screenshot 2026-10-11 at 00.19.48.png'

@@ -1,0 +1,125 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KYKH6VRH83PXCWZ1HZ9FW0",
+  "session_id": "01a126b2-2644-74e0-b348-e27a3baeec42",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T22:23:18.310312Z",
+  "branch": "vlad",
+  "checkpoints_count": 4,
+  "save_step_count": 3,
+  "files_touched": [
+    "README.md",
+    "docs/NEXT_SESSION.md",
+    "src/rfq_agent/__main__.py",
+    "src/rfq_agent/answer.py",
+    "src/rfq_agent/eligibility.py",
+    "src/rfq_agent/loop.py",
+    "src/rfq_agent/mail.py",
+    "src/rfq_agent/planner.py",
+    "src/rfq_agent/submission.py",
+    "tests/test_eligibility.py",
+    "tests/test_loop.py",
+    "tests/test_mail.py",
+    "tests/test_regressions.py",
+    "tests/test_submission.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6.1-sol",
+  "turn_id": "0ba25d80ccde",
+  "checkpoint_transcript_start": 3946,
+  "transcript_lines_at_start": 3946,
+  "compact_transcript_start": 507,
+  "token_usage": {
+    "input_tokens": 363430,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 23929910,
+    "output_tokens": 75344,
+    "api_call_count": 159,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 37
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T22:23:17.864902Z",
+    "agent_lines": 0,
+    "agent_removed": 0,
+    "human_added": 432,
+    "human_modified": 91,
+    "human_removed": 0,
+    "total_committed": 432,
+    "total_lines_changed": 523,
+    "agent_percentage": 0,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 367,
+      "user_lines_removed": 27,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "README.md": 15,
+        "src/rfq_agent/__main__.py": 44,
+        "src/rfq_agent/answer.py": 1,
+        "src/rfq_agent/eligibility.py": 58,
+        "src/rfq_agent/mail.py": 14,
+        "src/rfq_agent/submission.py": 127,
+        "tests/test_eligibility.py": 50,
+        "tests/test_mail.py": 14,
+        "tests/test_submission.py": 44
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/answer.py": 1,
+        "src/rfq_agent/mail.py": 1,
+        "src/rfq_agent/submission.py": 10,
+        "tests/test_submission.py": 15
+      }
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 156,
+      "user_lines_removed": 29,
+      "agent_lines_added": 406,
+      "agent_lines_removed": 27,
+      "user_added_per_file": {
+        "src/rfq_agent/__main__.py": 7,
+        "src/rfq_agent/eligibility.py": 49,
+        "src/rfq_agent/submission.py": 58,
+        "tests/test_eligibility.py": 21,
+        "tests/test_submission.py": 21
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/__main__.py": 1,
+        "src/rfq_agent/eligibility.py": 12,
+        "src/rfq_agent/submission.py": 15,
+        "tests/test_eligibility.py": 1
+      }
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 297,
+      "user_lines_removed": 22,
+      "agent_lines_added": 519,
+      "agent_lines_removed": 40,
+      "user_added_per_file": {
+        "docs/NEXT_SESSION.md": 25,
+        "src/rfq_agent/eligibility.py": 49,
+        "src/rfq_agent/loop.py": 4,
+        "src/rfq_agent/submission.py": 111,
+        "tests/test_eligibility.py": 21,
+        "tests/test_loop.py": 9,
+        "tests/test_regressions.py": 35,
+        "tests/test_submission.py": 43
+      },
+      "user_removed_per_file": {
+        "src/rfq_agent/eligibility.py": 12,
+        "src/rfq_agent/submission.py": 5,
+        "tests/test_eligibility.py": 1,
+        "tests/test_loop.py": 1,
+        "tests/test_submission.py": 3
+      }
+    }
+  ]
+}
