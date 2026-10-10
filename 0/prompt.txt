@@ -1,0 +1,86 @@
+# Context from my IDE setup:
+
+## Active file: docs/REHEARSAL_REPORT.md
+
+## Open tabs:
+- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
+- README.md: README.md
+
+## My request:
+Start with the easiest one and start completing them. Remember for rehearsals you need to deploy the proxy server first
+
+---
+
+# Context from my IDE setup:
+
+## Active file: docs/REHEARSAL_REPORT.md
+
+## Open tabs:
+- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
+- README.md: README.md
+
+## My request:
+So what is missing to pass the test?
+
+---
+
+# Context from my IDE setup:
+
+## Active file: docs/REHEARSAL_REPORT.md
+
+## Open tabs:
+- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
+- README.md: README.md
+
+## My request:
+Implement
+
+---
+
+# Context from my IDE setup:
+
+## Active file: docs/REHEARSAL_REPORT.md
+
+## Open tabs:
+- REHEARSAL_REPORT.md: docs/REHEARSAL_REPORT.md
+- README.md: README.md
+
+## My request:
+PLEASE IMPLEMENT THIS PLAN:
+# Tender-first evidence recovery
+
+## Summary
+
+Repair the generic transient-control workflow that currently prevents the Tender agent from recording Q&A evidence. Keep navigation, row selection, and pagination model-directed; make the browser tool preserve the exact pre-click and post-click evidence needed for a valid record. Validate this tender slice in a research-only rehearsal before extending the pattern to Specifications, ERP, and Email.
+
+## Implementation changes
+
+- Add a typed inspection result returned by `inspect_controls`, containing the selected control’s label/context, pre-click and post-click observation IDs, revealed text, and exact citation-ready excerpts.
+- Preserve each inspected Q&A row as an atomic evidence bundle even when its answer and timestamp appear in separate observations. The helper will not infer business facts or choose pages.
+- Return clear action errors when `record` lacks `data` or records, rather than allowing a `KeyError`; retain the existing strict proof that every cited excerpt exists in its cited source.
+- Update the Qwen prompt to:
+  - inspect model-selected rows and date controls;
+  - use only the returned citation bundles when recording findings;
+  - select observed pagination controls itself;
+  - avoid empty record actions and unsupported conclusions.
+- Keep the Tender agent responsible for choosing whether a visible Q&A item is relevant; the coordinator will only store evidence and resolve precedence deterministically.
+- Continue using Clef only for sanitized popup classification. Existing local verification-gate handling remains local and non-interactive.
+
+## Validation and rehearsal
+
+- Add synthetic nested-iframe tests for two materially different Q&A layouts, including:
+  - answer and date revealed in separate UI transitions;
+  - model-selected pagination;
+  - withdrawn and superseded Q&A;
+  - stale controls and malformed/empty record actions;
+  - citation exactness and no unsupported evidence entering the ledger.
+- Run focused runtime, multi-agent, browser integration, and pricing tests.
+- Start the existing Atira model proxy, then run a research-only Tender rehearsal with a fresh trace directory.
+- Accept the slice only if the trace reaches subsequent Q&A pages, records citation-backed Tender evidence without empty-record or citation errors, and does not submit, request a TAN, or alter portal state beyond normal scouting navigation.
+- Update the rehearsal report with verified findings only, create an Entire-checked local commit, then apply the same transient-evidence interface to Specifications, ERP, and Email before a four-agent research rehearsal.
+
+## Assumptions
+
+- The current four-agent architecture and browser assignments remain in place.
+- Qwen remains the decision-maker; no public-site paths, record IDs, page counts, or scenario values will be hardcoded.
+- The Tender-first rehearsal is the next gate; live signing and unscored sandbox submission resume only after all four evidence sources provide complete, validated inputs.
