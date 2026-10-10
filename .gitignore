@@ -7,8 +7,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
-.codex/
-.entire/
 artifacts/
 dist/
 tmp/

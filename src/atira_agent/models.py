@@ -10,12 +10,17 @@ from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpe
 from .contracts import AgentAction
 from .tool_specs import model_tools
 
+SPECIALIST_DISPATCH_TIMEOUT_SECONDS = 12
+RESEARCH_EXCLUDED_TOOLS = frozenset({
+    "calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan", "sign", "receipt", "api_submit",
+})
+
 
 def normalize_record_item(item: dict) -> dict:
     """Accept a flat named-tool record while retaining the canonical envelope.
 
-    Tool-call models occasionally place typed record fields beside ``kind`` in
-    a batch rather than under ``data``.  This is a transport variation, not a
+    Tool-call models occasionally place typed record fields beside ``kind``
+    rather than under ``data``.  This is a transport variation, not a
     business inference: it is normalized before the normal schema and evidence
     checks run.  A record without actual typed fields still fails clearly.
     """
@@ -110,6 +115,7 @@ class QwenClient:
         self.config, self.telemetry = config, telemetry
         self.client = AsyncOpenAI(base_url=config.model_url, api_key=config.model_key, max_retries=0, timeout=120)
         self.input_tokens = self.output_tokens = 0
+        self.excluded_tools = frozenset()
 
     async def decide(self, messages, deadline):
         for attempt in range(3):
@@ -119,7 +125,7 @@ class QwenClient:
                 self.telemetry.emit("model_started", model=self.config.model, attempt=attempt + 1, remaining=deadline.remaining)
                 async with asyncio.timeout(timeout):
                     reply = await self.client.chat.completions.create(
-                        model=self.config.model, messages=messages, tools=model_tools(),
+                        model=self.config.model, messages=messages, tools=model_tools(exclude=self.excluded_tools),
                         tool_choice="required",
                         # Each turn must return one small, validated tool call.
                         # A large completion allowance needlessly increases
@@ -169,10 +175,15 @@ class QwenClient:
                   "brief": self.telemetry.redactor.text(brief), "sites": sites,
                   "return": {"tender": "siteId", "specifications": "siteId", "erp": "siteId", "mail": "siteId"}}
         try:
-            reply = await self.client.chat.completions.create(
-                model=self.config.model, messages=[{"role": "user", "content": json.dumps(prompt, ensure_ascii=False)}],
-                response_format={"type": "json_object"}, temperature=0, max_tokens=300,
-            )
+            # This optional routing hint must never consume a material share of
+            # the 20-minute tender budget.  The deterministic assignment is
+            # validated against the supplied runtime sites and is the safe
+            # fallback if Qwen is busy.
+            async with asyncio.timeout(SPECIALIST_DISPATCH_TIMEOUT_SECONDS):
+                reply = await self.client.chat.completions.create(
+                    model=self.config.model, messages=[{"role": "user", "content": json.dumps(prompt, ensure_ascii=False)}],
+                    response_format={"type": "json_object"}, temperature=0, max_tokens=300,
+                )
             value = json.loads((reply.choices[0].message.content or "{}"))
             valid = {site["id"] for site in sites}
             if set(value) != set(fallback) or set(value.values()) != valid:

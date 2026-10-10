@@ -9,11 +9,15 @@ from urllib.parse import urljoin, urlsplit
 
 from .contracts import RECORD_TYPES, Observation, SubmissionState
 from .evidence import EvidenceLedger
-from .models import normalize_record_item
+from .models import RESEARCH_EXCLUDED_TOOLS, normalize_record_item
 from .pricing import calculate
 from .prompts import SYSTEM
 from .submit import Submission
 from .telemetry import safe_error
+
+MAX_EXPLICIT_NAVIGATIONS_PER_TARGET = 2
+MAX_MODEL_HISTORY_ITEMS = 8
+MAX_MODEL_HISTORY_RESULT_CHARS = 1600
 
 
 def action_signature(action, observation):
@@ -26,6 +30,28 @@ def action_signature(action, observation):
     return action.action, json.dumps(args, sort_keys=True, default=str), state
 
 
+def navigation_target(action, observation) -> str | None:
+    """Return a normalized destination for an explicit model navigation."""
+    if action.action != "navigate" or not isinstance(action.args.get("url"), str):
+        return None
+    value = urljoin(observation.url, action.args["url"])
+    parsed = urlsplit(value)
+    return parsed._replace(fragment="").geturl()
+
+
+def navigation_allowed(history, destination: str | None) -> bool:
+    """Allow one retry, but not an unproductive explicit URL cycle."""
+    return not destination or sum(target == destination for target in history) < MAX_EXPLICIT_NAVIGATIONS_PER_TARGET
+
+
+def compact_model_result(value):
+    """Keep decision context useful without replaying whole documents every turn."""
+    rendered = json.dumps(value, ensure_ascii=False, default=str)
+    if len(rendered) <= MAX_MODEL_HISTORY_RESULT_CHARS:
+        return value
+    return {"truncated": True, "preview": rendered[:MAX_MODEL_HISTORY_RESULT_CHARS]}
+
+
 class Orchestrator:
     def __init__(self, run, config, browser, model, telemetry, deadline, token=None, *, ledger=None,
                  submission=None, agent_name="orchestrator", role_instruction="", research_only=False):
@@ -34,26 +60,40 @@ class Orchestrator:
         self.ledger = ledger or EvidenceLedger(telemetry)
         self.submission = submission or Submission(run, browser, telemetry)
         self.agent_name, self.role_instruction, self.research_only = agent_name, role_instruction, research_only
-        self.history = deque(maxlen=16)
+        # A full RFQ run has a protected signing window.  MultiAgentCoordinator
+        # enables this only for its pre-submission research phase; an explicit
+        # research-only rehearsal can still use all of its requested budget.
+        self.stop_at_submission_reserve = False
+        self.history = deque(maxlen=MAX_MODEL_HISTORY_ITEMS)
         self.pricing = None
         self.observation = None
         self.stage = "investigating"
         self.last_action = None
         self.repeat_count = 0
+        self.navigation_targets = deque(maxlen=12)
         self._warned = False
         self.tan_callback = None
         self.popup_classifier = None
         self.popup_classification = None
 
     def messages(self):
+        # A specialist has no browser authority outside its assigned site.
+        # Withholding unrelated credentials and submission schema both reduces
+        # prompt size and avoids distracting it from its evidence-owning role.
+        scoped = self.research_only and not getattr(self.browser, "scope_expanded", False)
+        sites = self.run.access
+        if scoped:
+            sites = [site for site in sites if site.siteId == getattr(self.browser, "assigned_site", None)]
         context = {
             "task": self.telemetry.redactor.text(self.run.brief),
             "sites": [{"id": s.siteId, "url": s.url,
-                       "credential_handles": [f"{s.siteId}:{key}" for key in s.credentials]} for s in self.run.access],
-            "submission_target": self.run.submission.model_dump(), "answer_schema": self.run.answer_schema,
+                       "credential_handles": [f"{s.siteId}:{key}" for key in s.credentials]} for s in sites],
+            "submission_target": None if scoped else self.run.submission.model_dump(),
+            "answer_schema": {} if scoped else self.run.answer_schema,
             "remaining_seconds": round(self.deadline.remaining), "reserve_seconds": self.deadline.reserve,
             "submission_due": self.deadline.submission_due, "stage": self.stage,
-            "submission_state": self.submission.state, "evidence_ledger": self.ledger.model_context(),
+            "submission_state": self.submission.state, "evidence_ledger": self.ledger.model_context(
+                max_evidence=12 if scoped else 24),
             "calculation": self.pricing.model_dump(mode="json") if self.pricing else None,
             "recent_actions_and_results": list(self.history),
             "current_observation": self.observation.model_dump(mode="json") if self.observation else None,
@@ -74,6 +114,10 @@ class Orchestrator:
         self.telemetry.emit("stage_changed", stage=self.stage, remaining=self.deadline.remaining)
         consecutive_errors = 0
         for step in range(1, max_steps + 1):
+            if self.research_only and self.stop_at_submission_reserve and self.deadline.submission_due:
+                self.telemetry.emit("agent_complete", agent=self.agent_name,
+                                    reason="submission reserve reached", remaining=self.deadline.remaining)
+                return True
             if self.deadline.remaining <= 1:
                 break
             if self.submission.state in {SubmissionState.ACCEPTED, SubmissionState.SCOUTING_ACKNOWLEDGED}:
@@ -99,17 +143,34 @@ class Orchestrator:
                                         reason=self.popup_classification.get("reason", ""))
                     # Do not skip: the model solves the observed gate with
                     # drag + check + fill + click (see SYSTEM guidance).
-                action = await self.model.decide(self.messages(), self.deadline)
+                prior_exclusions = getattr(self.model, "excluded_tools", None)
+                if self.research_only:
+                    self.model.excluded_tools = RESEARCH_EXCLUDED_TOOLS
+                try:
+                    action = await self.model.decide(self.messages(), self.deadline)
+                finally:
+                    if prior_exclusions is None:
+                        # Test doubles do not need this capability and should
+                        # retain their original minimal interface.
+                        self.model.__dict__.pop("excluded_tools", None)
+                    else:
+                        self.model.excluded_tools = prior_exclusions
                 self.telemetry.emit("model_decision", **action.model_dump(), remaining=self.deadline.remaining)
                 signature = action_signature(action, self.observation)
                 self.repeat_count = self.repeat_count + 1 if signature == self.last_action else 0
                 self.last_action = signature
                 if self.repeat_count >= 3:
                     raise ValueError("Repeated action made no progress. Inspect current state and choose a different action.")
+                destination = navigation_target(action, self.observation)
+                if destination:
+                    if not navigation_allowed(self.navigation_targets, destination):
+                        raise ValueError("Navigation cycle made no progress: this destination was already opened twice. "
+                                         "Use the current visible result, an observed control, or record the verified facts.")
+                    self.navigation_targets.append(destination)
                 self.telemetry.emit("tool_call", tool=action.action, arguments=action.args)
                 result = await asyncio.wait_for(self.execute(action), self.deadline.timeout(35))
                 self.telemetry.emit("tool_result", tool=action.action, result=result)
-                self.history.append({"action": action.model_dump(), "result": result})
+                self.history.append({"action": action.model_dump(), "result": compact_model_result(result)})
                 consecutive_errors = 0
             except Exception as exc:
                 error = safe_error(exc, self.telemetry.redactor)

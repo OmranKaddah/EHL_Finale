@@ -33,6 +33,7 @@ CONTROL_INFO = """e => {
  x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};
 }"""
 TAN_PATTERN = re.compile(r"(?i)\b(?:signatur[- ]?)?TAN\b[^\d\n]{0,45}([0-9]{4,10})\b")
+BLANK_PAGE_RECOVERY_SECONDS = 40
 
 
 def origin(url: str) -> tuple:
@@ -70,6 +71,9 @@ class BrowserSession:
         self.last_screenshot = 0.0
         self.last_image = None
         self.last_image_size = None
+        self.blank_page_since = None
+        self.scope_expanded = False
+        self.recovery_url = next((site.url for site in scoped_access if site.siteId == assigned_site), None)
         for site in scoped_access:
             for key, value in site.credentials.items():
                 self.secret_values[f"{site.siteId}:{key}"] = (value, origin(site.url))
@@ -115,6 +119,7 @@ class BrowserSession:
             self.allowed.add(origin(site.url))
             for key, value in site.credentials.items():
                 self.secret_values[f"{site.siteId}:{key}"] = (value, origin(site.url))
+        self.scope_expanded = True
         self.telemetry.emit("browser_scope_expanded", reason="multi_agent_failure_fallback")
 
     def _register_page(self, page):
@@ -278,10 +283,41 @@ class BrowserSession:
             self.tab = original_tab
             await self.page.bring_to_front()
 
+    async def _recover_persistent_blank_page(self):
+        """Reconnect an assigned CDP tab that has remained blank too long.
+
+        Sandboxed browsers normally begin at ``about:blank`` and Qwen chooses
+        the first navigation.  A later persistent blank page is different: it
+        consumes the protected signing window without exposing controls for a
+        model decision.  Reopening only the runtime-supplied base URL is a
+        generic transport recovery, never a scenario route or selector.
+        """
+        if self.dialogs or self.page.url != "about:blank" or not self.recovery_url:
+            self.blank_page_since = None
+            return
+        now = time.monotonic()
+        if self.blank_page_since is None:
+            self.blank_page_since = now
+            return
+        elapsed = now - self.blank_page_since
+        if elapsed < BLANK_PAGE_RECOVERY_SECONDS:
+            return
+        try:
+            await self.page.goto(self.recovery_url, wait_until="domcontentloaded", timeout=15000)
+            self.telemetry.emit("browser_recovered", method="runtime_site_navigation",
+                                reason="persistent_about_blank", elapsed=round(elapsed, 1))
+        except Exception as exc:
+            self.telemetry.emit("browser_recovery_failed", method="runtime_site_navigation",
+                                reason="persistent_about_blank", error=type(exc).__name__)
+        # Start a new bounded interval even if the server leaves the tab blank;
+        # never hammer the runtime site on every observation.
+        self.blank_page_since = time.monotonic()
+
     async def observe(self, include_image=False) -> Observation:
         # An image from an earlier observation must never ground a new pixel action.
         self.last_image = None
         self.last_image_size = None
+        await self._recover_persistent_blank_page()
         self.observation_number += 1
         oid = f"{self.agent_id + '-' if self.agent_id else ''}o{self.observation_number}"
         self.refs = {}
@@ -330,7 +366,12 @@ class BrowserSession:
         self.telemetry.site = urlsplit(self.page.url).hostname or ""
         self.telemetry.emit("observation", id=oid, url=obs.url, title=obs.title, text=text, controls=obs.controls,
                             frames=obs.frames, tabs=obs.tabs, dialog=obs.dialog, documents=obs.documents)
-        if not dialog and (include_image or time.monotonic() - self.last_screenshot >= 4):
+        # DOM observations supply labels, refs and accessibility text for the
+        # ordinary semantic-control path.  Capturing a periodic image made
+        # every slow model turn multimodal even when it did not need pixels.
+        # The model can explicitly request screenshot before using a pixel
+        # action; Clef remains advisory when such an image is available.
+        if not dialog and include_image:
             await self.screenshot(raw)
         return obs
 
@@ -492,8 +533,12 @@ class BrowserSession:
                 await self.page.mouse.up()
             if start_element is not None:
                 # Native range unlocks often only listen for input/change.
-                # Setting a fixed max value is not model code execution.
+                # A genuine focused End key is important for controlled UI
+                # frameworks, which can discard a programmatic value update.
+                # The fixed fallback below is not model code execution.
                 try:
+                    await start_element.focus()
+                    await self.page.keyboard.press("End")
                     await start_element.evaluate(
                         """e => {
                           const r = (e.tagName === 'INPUT' && e.type === 'range') ? e
@@ -501,7 +546,11 @@ class BrowserSession:
                           if (r && r.tagName === 'INPUT' && r.type === 'range') {
                             r.focus();
                             const max = r.max !== '' ? Number(r.max) : 100;
-                            r.value = String(max);
+                            // Use the native setter so React-style controlled
+                            // ranges observe the value transition.
+                            const set = Object.getOwnPropertyDescriptor(
+                              HTMLInputElement.prototype, 'value').set;
+                            set.call(r, String(max));
                             r.dispatchEvent(new Event('input', {bubbles: true}));
                             r.dispatchEvent(new Event('change', {bubbles: true}));
                             return 'range-max';

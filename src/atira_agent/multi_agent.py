@@ -132,43 +132,62 @@ class MultiAgentCoordinator:
         tender = self.specialists["tender"]
         self.submission = Submission(self.run, tender.browser, tender.telemetry)
 
-    async def investigate(self, steps=72):
-        return await self.investigate_roles(steps=steps)
+    async def investigate(self, steps=72, *, stop_at_submission_reserve=False):
+        return await self.investigate_roles(steps=steps, stop_at_submission_reserve=stop_at_submission_reserve)
 
-    async def investigate_roles(self, *, steps=72, roles: tuple[str, ...] | None = None):
+    async def investigate_roles(self, *, steps=72, roles: tuple[str, ...] | None = None,
+                                stop_at_submission_reserve=False):
         """Run all specialists or a bounded evidence-only focus subset."""
         selected = tuple(roles or tuple(self.specialists))
         unknown = set(selected) - set(self.specialists)
         if unknown:
             raise ValueError(f"Unknown specialist roles: {sorted(unknown)}")
         async def run_one(item: Specialist):
+            item.controller.stop_at_submission_reserve = stop_at_submission_reserve
             try:
                 return await item.controller.run_loop(max_steps=steps)
             except Exception as exc:
                 item.telemetry.emit("agent_failed", error=safe_error(exc, item.telemetry.redactor), role=item.role)
                 return False
         items = [self.specialists[role] for role in selected]
-        results = await asyncio.gather(*(run_one(item) for item in items), return_exceptions=False)
-        failures = [role for role, ok in zip(selected, results) if not ok]
+        # Do not wait for a healthy, slow worker to exhaust the signing reserve
+        # after two peers have already failed.  The prior gather-only design
+        # noticed that condition only when every worker had ended, which made
+        # the existing bounded sequential recovery unreachable in this run.
+        pending = {asyncio.create_task(run_one(item)): item.role for item in items}
+        outcomes: dict[str, bool] = {}
+        while pending:
+            done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                role = pending.pop(task)
+                outcomes[role] = task.result()
+            failures_so_far = [role for role, ok in outcomes.items() if not ok]
+            if roles is None and len(failures_so_far) >= 2 and not self.sequential_fallback and not self.deadline.submission_due:
+                await self._sequential_recovery(failures_so_far)
+        failures = [role for role in selected if not outcomes[role]]
         self.root_telemetry.emit("agents_phase_complete", completed=[role for role in selected if role not in failures],
                                  failed=failures, focus=selected, remaining=self.deadline.remaining)
         if roles is not None:
             return failures
-        if len(failures) >= 2 and not self.deadline.submission_due:
-            # Reliability wins over keeping four logical agents alive. Reuse the
-            # tender browser (one of the supplied four) for bounded sequential
-            # recovery; do not create a new browser or retry failed workers.
-            tender = self.specialists["tender"]
-            tender.browser.expand_to_run_access()
-            tender.controller.role_instruction = (
-                "Multiple specialists failed. Perform a bounded sequential recovery across the runtime-provided sites, "
-                "using shared evidence to fill only the highest-impact missing facts. Do not submit."
-            )
-            self.sequential_fallback = True
-            await tender.controller.run_loop(max_steps=48)
-            self.root_telemetry.emit("sequential_fallback_complete", failed_agents=failures,
-                                     remaining=self.deadline.remaining)
+        if len(failures) >= 2 and not self.sequential_fallback and not self.deadline.submission_due:
+            await self._sequential_recovery(failures)
         return failures
+
+    async def _sequential_recovery(self, failures: list[str]):
+        """Reuse the idle tender browser before the protected signing window."""
+        # Reliability wins over keeping four logical agents alive. Reuse one of
+        # the supplied browsers; never create a fifth browser or retry a failed
+        # worker on its own browser.
+        tender = self.specialists["tender"]
+        tender.browser.expand_to_run_access()
+        tender.controller.role_instruction = (
+            "Multiple specialists failed. Perform a bounded sequential recovery across the runtime-provided sites, "
+            "using shared evidence to fill only the highest-impact missing facts. Do not submit."
+        )
+        self.sequential_fallback = True
+        await tender.controller.run_loop(max_steps=48)
+        self.root_telemetry.emit("sequential_fallback_complete", failed_agents=failures,
+                                 remaining=self.deadline.remaining)
 
     def set_research_focus(self, role: str | None):
         if role is None:

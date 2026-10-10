@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 
-def model_tools():
+def model_tools(*, exclude: set[str] | frozenset[str] = frozenset()):
     specs = {
         "navigate": ("Visit an observed link or runtime site URL", {"url": "string", "new_tab": "boolean"}, ["url"]),
         "click": ("Click a current observed control", {"ref": "string"}, ["ref"]),
@@ -23,7 +23,13 @@ def model_tools():
         "read_links": ("Read up to six explicitly selected record links from the current result set", {"refs": "array:string"}, ["refs"]),
         "document": ("Read a selected downloaded document or ZIP member", {"id": "string", "member": "string", "page": "integer"}, ["id"]),
         "cite": ("Create evidence from exact observed excerpts", {"observation": "string", "excerpt": "string", "scope": "object", "citations": "array:object"}, []),
-        "record": ("Validate one typed record with inline citations. kind and data are required; data needs id", {"kind": "string", "data": "object", "citations": "array:object", "records": "array:object"}, ["kind", "data"]),
+        # Keep the model-facing contract deliberately singular.  Earlier
+        # compatibility support for ``records`` made the function schema
+        # contradictory (kind/data were required while a batch was offered),
+        # and Qwen sometimes mixed both envelopes.  The parser still accepts
+        # historical batched traces, but a live model now has one unambiguous
+        # way to publish a typed, cited fact.
+        "record": ("Validate one typed record with inline citations. kind and data are required; data needs id", {"kind": "string", "data": "object", "citations": "array:object"}, ["kind", "data"]),
         "schema": ("Read exact schemas for unfamiliar record fields", {"kind": "string", "kinds": "array:string"}, []),
         "inspect_evidence": ("Reread a retained observation or the evidence ledger", {"observation": "string"}, []),
         "calculate": ("Calculate deterministic prices from verified evidence", {"partial": "boolean"}, []),
@@ -38,6 +44,8 @@ def model_tools():
     }
     result = []
     for name, (description, fields, required) in specs.items():
+        if name in exclude:
+            continue
         properties = {"summary": {"type": "string", "maxLength": 500, "description": "Short observable purpose"}}
         for key, kind in fields.items():
             properties[key] = {"type": "array", "items": {"type": kind.split(":")[1]}} if kind.startswith("array:") else {"type": kind}

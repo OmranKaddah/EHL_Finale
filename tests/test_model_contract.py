@@ -1,8 +1,10 @@
+import asyncio
 import json
 
 import pytest
 
-from atira_agent.models import parse_action, parse_tool_call
+from atira_agent.config import Config
+from atira_agent.models import QwenClient, parse_action, parse_tool_call
 from atira_agent.tool_specs import model_tools
 
 
@@ -36,6 +38,14 @@ def test_named_tool_schemas_cover_the_executor_contract():
     assert {x["function"]["name"] for x in model_tools()} == set(AgentAction.model_json_schema()["properties"]["action"]["enum"])
     record = next(item["function"] for item in model_tools() if item["function"]["name"] == "record")
     assert record["parameters"]["required"] == ["kind", "data"]
+    assert "records" not in record["parameters"]["properties"]
+
+
+def test_research_schema_hides_pricing_and_signing_tools():
+    excluded = {"calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan", "sign", "receipt", "api_submit"}
+    names = {item["function"]["name"] for item in model_tools(exclude=excluded)}
+    assert not names & excluded
+    assert {"navigate", "record", "cite", "schema"} <= names
 
 
 def test_serialized_batch_and_citations_preserve_quotes():
@@ -70,3 +80,22 @@ def test_malformed_record_transport_is_recoverable_value_error(args):
 def test_unknown_actions_and_conflicting_arguments_are_rejected(payload):
     with pytest.raises(ValueError):
         parse_action(json.dumps(payload))
+
+
+async def test_specialist_dispatch_uses_fast_validated_fallback_on_timeout(telemetry, monkeypatch):
+    class Completions:
+        async def create(self, **_kwargs):
+            await asyncio.sleep(1)
+
+    class Client:
+        class Chat:
+            completions = Completions()
+
+        chat = Chat()
+
+    monkeypatch.setattr("atira_agent.models.SPECIALIST_DISPATCH_TIMEOUT_SECONDS", 0.01)
+    client = QwenClient(Config(False, (), "qwen", "qwen", "http://localhost", "local"), telemetry)
+    client.client = Client()
+    fallback = {"tender": "t", "specifications": "s", "erp": "e", "mail": "m"}
+
+    assert await client.assign_specialists("fixture", [{"id": value} for value in fallback.values()], fallback) == fallback

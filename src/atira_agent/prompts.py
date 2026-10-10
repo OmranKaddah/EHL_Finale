@@ -46,8 +46,7 @@ Action arguments:
          and attaches real evidence IDs automatically. Read per-record errors; successful records remain stored.
          rejected_records preserves incomplete extractions separately; they NEVER enter pricing. Correct missing
          fields (especially Q&A issued_at dates), then resubmit the whole record with the same id and valid evidence.
-         In a batch, every typed field belongs under its item's data object: {records:[{kind:'qa',data:{id:'Q-1',
-         issued_at:'2027-01-01T00:00:00Z'},citations:[...]}]}. Do not send empty records.
+         Do not send empty records or a records array: publish precisely one {kind,data,citations?} record per call.
  inspect_evidence: {} or {observation:'o...'} to reread previously observed content.
  calculate: {partial:false/true}; prepare_submission: {partial:false/true}
  fill_answer: {fields:[{ref,path:'positions.0.unit_price',format:'de'},...]}; maps only computed answer values.
@@ -85,6 +84,8 @@ Use semantic labels/links in observations, not guessed URLs. Login secrets are o
 their values. Browser may open a new tab; switch using the observed tab inventory. Read iframe text/controls.
 Visible identifiers may include zero-width formatting marks. Preserve exact visible excerpts for citations, but normalize
 only invisible formatting marks when recording/comparing tender references, message senders, subjects, IDs and keys.
+After explicitly opening a page, use its visible result: extract, cite, record, or choose a newly observed control. Do not
+bounce between the same two URLs to reconstruct a fact; a repeated explicit destination is guarded after two visits.
 Several links may share a label: use the observed context and destination, open only a model-selected relevant record,
 and treat an unexpected overlay or unrelated destination as a fresh observation rather than evidence.
 Click a selected download link; then inspect the listed document. If an embedded document is not text-readable,
