@@ -1,0 +1,159 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KSM7JYG8C9AJQAHJP5YVM1",
+  "session_id": "01a126fe-c288-72f0-be15-103bd4e6ebfa",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T20:56:14.887099351Z",
+  "branch": "experiment/browser-use-specialist",
+  "checkpoints_count": 9,
+  "save_step_count": 9,
+  "files_touched": [
+    ".env.example",
+    ".gitignore",
+    "pyproject.toml",
+    "requirements-rfq.txt",
+    "src/hackathon_toolkit/rfq/browser.py",
+    "src/hackathon_toolkit/rfq/runtime.py",
+    "src/hackathon_toolkit/rfq/specialists.py",
+    "tests/test_rfq_browser_smoke.py",
+    "tests/test_rfq_runtime.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-6-luna",
+  "turn_id": "fdab5e4f46ef",
+  "checkpoint_transcript_start": 48,
+  "transcript_lines_at_start": 48,
+  "compact_transcript_start": 5,
+  "token_usage": {
+    "input_tokens": 1144232,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 30531712,
+    "output_tokens": 95578,
+    "api_call_count": 267,
+    "subagent_tokens_complete": true
+  },
+  "session_metrics": {
+    "turn_count": 10
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T20:56:14.786602164Z",
+    "agent_lines": 0,
+    "agent_removed": 13,
+    "human_added": 900,
+    "human_modified": 357,
+    "human_removed": 0,
+    "total_committed": 1164,
+    "total_lines_changed": 1270,
+    "agent_percentage": 1.0236220472440944,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 2,
+      "user_lines_added": 0,
+      "user_lines_removed": 0,
+      "agent_lines_added": 507,
+      "agent_lines_removed": 0
+    },
+    {
+      "checkpoint_number": 3,
+      "user_lines_added": 1325,
+      "user_lines_removed": 357,
+      "agent_lines_added": 507,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68,
+        "src/hackathon_toolkit/rfq/browser.py": 1,
+        "src/hackathon_toolkit/rfq/runtime.py": 1180,
+        "src/hackathon_toolkit/rfq/specialists.py": 76
+      },
+      "user_removed_per_file": {
+        "src/hackathon_toolkit/rfq/runtime.py": 337,
+        "src/hackathon_toolkit/rfq/specialists.py": 20
+      }
+    },
+    {
+      "checkpoint_number": 4,
+      "user_lines_added": 68,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1939,
+      "agent_lines_removed": 358,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68
+      }
+    },
+    {
+      "checkpoint_number": 5,
+      "user_lines_added": 68,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1939,
+      "agent_lines_removed": 358,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68
+      }
+    },
+    {
+      "checkpoint_number": 6,
+      "user_lines_added": 68,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1939,
+      "agent_lines_removed": 358,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68
+      }
+    },
+    {
+      "checkpoint_number": 7,
+      "user_lines_added": 68,
+      "user_lines_removed": 0,
+      "agent_lines_added": 1980,
+      "agent_lines_removed": 358,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68
+      }
+    },
+    {
+      "checkpoint_number": 8,
+      "user_lines_added": 79,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2061,
+      "agent_lines_removed": 368,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68,
+        "scripts/rehearse_rfq.sh": 11
+      }
+    },
+    {
+      "checkpoint_number": 9,
+      "user_lines_added": 79,
+      "user_lines_removed": 0,
+      "agent_lines_added": 2083,
+      "agent_lines_removed": 372,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 68,
+        "scripts/rehearse_rfq.sh": 11
+      }
+    },
+    {
+      "checkpoint_number": 10,
+      "user_lines_added": 130,
+      "user_lines_removed": 16,
+      "agent_lines_added": 2088,
+      "agent_lines_removed": 372,
+      "user_added_per_file": {
+        "scripts/local_browsers.sh": 69,
+        "scripts/rehearse_rfq.sh": 61
+      },
+      "user_removed_per_file": {
+        "scripts/rehearse_rfq.sh": 16
+      }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KSM7JYG8C9AJQAHJP5YVM1",
+  "strategy": "manual-commit",
+  "branch": "experiment/browser-use-specialist",
+  "checkpoints_count": 9,
+  "files_touched": [
+    ".env.example",
+    ".gitignore",
+    "pyproject.toml",
+    "requirements-rfq.txt",
+    "src/hackathon_toolkit/rfq/browser.py",
+    "src/hackathon_toolkit/rfq/runtime.py",
+    "src/hackathon_toolkit/rfq/specialists.py",
+    "tests/test_rfq_browser_smoke.py",
+    "tests/test_rfq_runtime.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1144232,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 30531712,
+    "output_tokens": 95578,
+    "api_call_count": 267,
+    "subagent_tokens_complete": true
+  }
+}
