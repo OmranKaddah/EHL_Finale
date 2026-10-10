@@ -4,7 +4,7 @@ from atira_agent.browser import BrowserSession, origin
 from atira_agent.config import Config
 from atira_agent.contracts import RunContext
 from atira_agent.dashboard import Dashboard
-from atira_agent.multi_agent import assign_sites, benchmark_schedule
+from atira_agent.multi_agent import ROLE_ORDER, assign_sites, benchmark_schedule
 from atira_agent.orchestrator import Orchestrator
 from atira_agent.popup_classifier import PopupClassifier
 from atira_agent.telemetry import Redactor, Telemetry
@@ -26,6 +26,11 @@ def test_dependency_aware_benchmark_beats_sequential_baseline():
     result = benchmark_schedule()
     assert result["dependency_aware_parallel_seconds"] < result["sequential_seconds"]
     assert result["saved_seconds"] > 0
+
+
+def test_research_focus_targets_only_a_known_specialist():
+    # The runtime role names form a closed interface for CLI focus runs.
+    assert set(("tender", "specifications", "erp", "mail")) == set(ROLE_ORDER)
 
 
 def test_popup_classifier_only_runs_for_probable_blockers():

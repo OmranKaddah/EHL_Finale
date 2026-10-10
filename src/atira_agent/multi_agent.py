@@ -133,16 +133,27 @@ class MultiAgentCoordinator:
         self.submission = Submission(self.run, tender.browser, tender.telemetry)
 
     async def investigate(self, steps=72):
+        return await self.investigate_roles(steps=steps)
+
+    async def investigate_roles(self, *, steps=72, roles: tuple[str, ...] | None = None):
+        """Run all specialists or a bounded evidence-only focus subset."""
+        selected = tuple(roles or tuple(self.specialists))
+        unknown = set(selected) - set(self.specialists)
+        if unknown:
+            raise ValueError(f"Unknown specialist roles: {sorted(unknown)}")
         async def run_one(item: Specialist):
             try:
                 return await item.controller.run_loop(max_steps=steps)
             except Exception as exc:
                 item.telemetry.emit("agent_failed", error=safe_error(exc, item.telemetry.redactor), role=item.role)
                 return False
-        results = await asyncio.gather(*(run_one(item) for item in self.specialists.values()), return_exceptions=False)
-        failures = [role for role, ok in zip(self.specialists, results) if not ok]
-        self.root_telemetry.emit("agents_phase_complete", completed=[role for role in self.specialists if role not in failures],
-                                 failed=failures, remaining=self.deadline.remaining)
+        items = [self.specialists[role] for role in selected]
+        results = await asyncio.gather(*(run_one(item) for item in items), return_exceptions=False)
+        failures = [role for role, ok in zip(selected, results) if not ok]
+        self.root_telemetry.emit("agents_phase_complete", completed=[role for role in selected if role not in failures],
+                                 failed=failures, focus=selected, remaining=self.deadline.remaining)
+        if roles is not None:
+            return failures
         if len(failures) >= 2 and not self.deadline.submission_due:
             # Reliability wins over keeping four logical agents alive. Reuse the
             # tender browser (one of the supplied four) for bounded sequential
@@ -158,6 +169,20 @@ class MultiAgentCoordinator:
             self.root_telemetry.emit("sequential_fallback_complete", failed_agents=failures,
                                      remaining=self.deadline.remaining)
         return failures
+
+    def set_research_focus(self, role: str | None):
+        if role is None:
+            return
+        if role not in self.specialists:
+            raise ValueError(f"Unknown specialist role: {role}")
+        if role == "tender":
+            self.specialists[role].controller.role_instruction += (
+                " This is a focused evidence-only rehearsal: after login, go directly to the observed Q&A/clarification "
+                "view and traverse its relevant pages. Reveal date/content details and continue pagination before recording "
+                "any Q&A records; cite only the observation ID returned by the immediately preceding inspection result. "
+                "Do not inspect tender documents unless an observed Q&A entry explicitly requires it."
+            )
+        self.root_telemetry.emit("research_focus", role=role)
 
     async def retrieve_tan(self, submission):
         """Let the mail specialist retrieve the current TAN after the portal asks for it."""

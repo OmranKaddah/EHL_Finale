@@ -39,6 +39,8 @@ uv run python agent.py --model-smoke
 .\scripts\run-local.ps1
 # Evidence-only scouting: never calculate, request a TAN, or submit.
 .\scripts\run-local.ps1 -ResearchOnly -MaxSteps 180
+# One specialist only, for a bounded evidence investigation.
+.\scripts\run-local.ps1 -ResearchOnly -Focus tender -MaxSteps 180
 ```
 
 Watch the visible Chromium window and [local dashboard](http://127.0.0.1:8787).

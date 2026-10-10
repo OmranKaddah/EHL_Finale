@@ -1,4 +1,4 @@
-param([switch]$ModelSmoke, [switch]$ResearchOnly, [int]$MaxSteps = 450, [string]$TraceDir = '')
+param([switch]$ModelSmoke, [switch]$ResearchOnly, [ValidateSet('tender','specifications','erp','mail')][string]$Focus = '', [int]$MaxSteps = 450, [string]$TraceDir = '')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path -Parent $PSScriptRoot)
 $atiraCommand = Get-Command atira -ErrorAction SilentlyContinue
@@ -9,5 +9,6 @@ if (-not $TraceDir) { $TraceDir = 'artifacts/' + (Get-Date -Format 'yyyyMMdd-HHm
 $agentArgs = @('run','--no-sync','python','agent.py','--debug','--headful','--dashboard','--trace-dir',$TraceDir,'--max-steps',"$MaxSteps")
 if ($ModelSmoke) { $agentArgs += '--model-smoke' }
 if ($ResearchOnly) { $agentArgs += '--research-only' }
+if ($Focus) { $agentArgs += @('--focus', $Focus) }
 & uv @agentArgs
 exit $LASTEXITCODE

@@ -42,6 +42,7 @@ async def run(args):
             return 0
         coordinator = MultiAgentCoordinator(context, config, deadline, telemetry, Path(args.trace_dir), os.environ.get("CHALLENGE_RUN_TOKEN"))
         await coordinator.start()
+        coordinator.set_research_focus(args.focus)
         if args.dashboard and not config.sandbox:
             dashboard = Dashboard(coordinator.telemetries, args.dashboard_port)
             try:
@@ -49,7 +50,8 @@ async def run(args):
                 telemetry.emit("dashboard_started", url=f"http://127.0.0.1:{port}")
             except Exception as exc:
                 telemetry.emit("dashboard_unavailable", error=safe_error(exc, redactor))
-        failed = await coordinator.investigate(steps=max(1, min(args.max_steps, 96)))
+        focus_roles = (args.focus,) if args.focus else None
+        failed = await coordinator.investigate_roles(steps=max(1, min(args.max_steps, 96)), roles=focus_roles)
         if args.research_only:
             telemetry.artifact("summary.json", {"success": False, "research_only": True,
                                "failed_agents": failed, "remaining": deadline.remaining,
@@ -85,6 +87,8 @@ def main():
     parser.add_argument("--model-smoke", action="store_true")
     parser.add_argument("--benchmark", action="store_true", help="Report a deterministic dependency-scheduling baseline comparison")
     parser.add_argument("--research-only", action="store_true", help="Investigate and publish evidence without calculating or submitting")
+    parser.add_argument("--focus", choices=("tender", "specifications", "erp", "mail"),
+                        help="Run only one specialist during a research rehearsal")
     parser.add_argument("--max-steps", type=int, default=450)
     args = parser.parse_args()
     return asyncio.run(run(args))
