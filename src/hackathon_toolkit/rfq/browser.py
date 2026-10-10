@@ -2,17 +2,24 @@
 from __future__ import annotations
 
 import base64
+import asyncio
 import csv
 import json
 import math
 import io
 import zipfile
 from pathlib import Path
+import re
 from urllib.parse import urlsplit, urljoin
 
 from .evidence import EvidenceBook
 
 MAX_DOCUMENT = 20 * 1024 * 1024
+NAVIGATION_LABEL = re.compile(
+    r"\b(?:log\s*in|sign\s*in|next|continue|submit|send|review|checkout|"
+    r"anmelden|einloggen|weiter|fortfahren|einreichen|abgeben|absenden|prüfen)\b",
+    re.I,
+)
 
 
 def origin(url: str) -> str:
@@ -65,6 +72,34 @@ class BrowserSession:
         self.control_info = {}
         self.browser_origins = {}
         self.active_pages = {}
+        self.last_observations = {}
+
+    @staticmethod
+    def page_changed(before, after):
+        if before is None:
+            return False
+        def controls(observation):
+            return [(item.get("tag"), item.get("type"), item.get("text"),
+                     item.get("label"), item.get("value"), item.get("checked"),
+                     item.get("disabled"), item.get("valid"),
+                     item.get("validationMessage"), item.get("ariaInvalid"))
+                    for item in observation["controls"]]
+        return (before["text"] != after["text"] or
+                before["active_dialog"] != after["active_dialog"] or
+                (before.get("_controls_complete") and controls(before) != controls(after)))
+
+    @staticmethod
+    def expects_navigation(operation, args, info, current_url):
+        if operation == "navigate":
+            return args.get("url") != current_url
+        if operation == "press":
+            return args.get("value") == "Enter"
+        if operation != "click":
+            return False
+        href = info.get("href")
+        label = " ".join(str(info.get(key) or "") for key in ("text", "label", "title"))
+        return bool((info.get("tag") == "A" and href and href != "#") or
+                    info.get("type") == "submit" or NAVIGATION_LABEL.search(label))
 
     @classmethod
     async def connect(cls, playwright, endpoints: list[str], book: EvidenceBook, allowed_urls: list[str]):
@@ -155,9 +190,13 @@ class BrowserSession:
             info = await handle.evaluate("""e => ({tag: e.tagName, type: e.getAttribute('type'),
                 text: (e.innerText || e.textContent || '').slice(0, 500),
                 label: e.getAttribute('aria-label') || (e.labels ? [...e.labels].map(x => x.innerText).join(' ') : ''),
+                title: e.getAttribute('title'),
                 placeholder: e.getAttribute('placeholder'), name: e.getAttribute('name'),
                 value: e.tagName === 'INPUT' && e.type !== 'password' ? e.value.slice(0, 300) : undefined,
                 hasValue: e.tagName === 'INPUT' && e.type === 'password' ? !!e.value : undefined,
+                required: !!e.required, valid: e.validity ? e.validity.valid : undefined,
+                validationMessage: e.validationMessage || undefined,
+                ariaInvalid: e.getAttribute('aria-invalid'),
                 disabled: !!e.disabled, checked: e.checked, min: e.min, max: e.max, step: e.step,
                 href: e.getAttribute('href'), options: e.tagName === 'SELECT' ?
                 [...e.options].map(x => ({value: x.value, text: x.text})) : undefined})""")
@@ -174,11 +213,18 @@ class BrowserSession:
         observation = self.book.observe(frame.url, evidence_text)
         self.observed_pages[observation] = page_index
         self.control_info = {ref: info for ref, info in self.control_info.items() if ref in self.controls}
-        return {"observation_id": observation, "page": page_index, "browser": self.browser_index(page), "url": frame.url, "text": excerpt,
+        result = {"observation_id": observation, "page": page_index, "browser": self.browser_index(page), "url": frame.url, "text": excerpt,
                 "active_dialog": (await active_dialog.inner_text())[:2000] if active_dialog else None,
                 "text_length": len(text), "offset": offset, "controls": controls, "control_count": total,
                 "frames": [{"frame": i, "url": f.url, "name": f.name} for i, f in enumerate(page.frames)],
                 "pages": self.page_list()}
+        # Keep a canonical comparison even when the model requests a later text
+        # or control page. Those paginated views are not a changed browser page.
+        self.last_observations[(page_index, frame_index)] = {
+            **result, "text": text[:16000],
+            "controls": controls, "_controls_complete": control_offset == 0,
+        }
+        return result
 
     async def act(self, operation: str, page: int | None = None, **args):
         if operation in {"click", "fill", "select", "press", "download", "set_range"} and not args.get("ref"):
@@ -295,6 +341,16 @@ class BrowserSession:
             excerpt = text[offset:offset + 24000]
             observation = self.book.observe(record["url"] + "#" + str(args.get("member", "")), excerpt)
             return {"observation_id": observation, "text": excerpt, "text_length": len(text), "offset": offset}
+        ref = args.get("ref")
+        prior_frame = self.controls[ref][1] if ref in self.controls else 0
+        previous = self.last_observations.get((page, prior_frame))
+        previous_url = (previous["url"] if previous else
+                        target.frames[prior_frame].url if prior_frame < len(target.frames) else target.url)
+        previous_pages = {row["page"] for row in self.page_list()}
+        expect_navigation = args.pop("expect_navigation", None)
+        if expect_navigation is None:
+            expect_navigation = self.expects_navigation(
+                operation, args, self.control_info.get(ref, {}), previous_url)
         try:
             next_frame = 0
             mutation_started = False
@@ -432,4 +488,41 @@ class BrowserSession:
             return {"status": "action_completed", "pages": self.page_list(),
                     "observation_error": type(exc).__name__,
                     "next": "Action may have succeeded; observe the page before acting again"}
+        if expect_navigation:
+            new_pages = [row for row in observation["pages"] if row["page"] not in previous_pages]
+            changed = self.page_changed(previous, observation)
+            if not new_pages and observation["url"] == previous_url and not changed:
+                # A client-side transition can start just after the click resolves.
+                await asyncio.sleep(1)
+                try:
+                    observation = await self.observe(page, next_frame if next_frame < len(target.frames) else 0)
+                except Exception as exc:
+                    observation["navigation_feedback"] = {
+                        "outcome": "uncertain", "previous_url": previous_url,
+                        "previous_observation_id": previous["observation_id"] if previous else None,
+                        "current_url": target.url, "observation_error": type(exc).__name__,
+                        "next": "Re-observe before retrying; the transition may have completed after the action.",
+                    }
+                    return {"status": "action_completed", **observation}
+                new_pages = [row for row in observation["pages"] if row["page"] not in previous_pages]
+                changed = self.page_changed(previous, observation)
+            if new_pages:
+                outcome = "new_page"
+                next_step = "The action opened another page. Inspect the new page before continuing."
+            elif observation["url"] != previous_url:
+                outcome = "navigated"
+                next_step = "Continue from the new page observation."
+            elif changed:
+                outcome = "same_url_changed"
+                next_step = "The URL stayed the same, but visible content changed. Inspect the current page for the next step, validation errors, or a confirmation before retrying."
+            else:
+                outcome = "stalled"
+                next_step = "The expected transition did not appear. Inspect current controls, validation messages, dialogs, and required fields; resolve the blocker before retrying. Do not repeat a submission or signing action without checking for a receipt."
+            observation["navigation_feedback"] = {
+                "outcome": outcome, "previous_url": previous_url,
+                "previous_observation_id": previous["observation_id"] if previous else None,
+                "current_url": observation["url"], "new_pages": new_pages,
+                "previous_page_text": previous["text"][:500] if previous and outcome == "stalled" else None,
+                "next": next_step,
+            }
         return {"status": "action_completed", **observation}

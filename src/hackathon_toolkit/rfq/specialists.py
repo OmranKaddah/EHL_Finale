@@ -1,4 +1,5 @@
 """Specialist instructions and run-local communication; no browser or model calls."""
+
 import asyncio
 from .progress import Progress
 
@@ -75,32 +76,70 @@ class Team:
     def send(self, sender, recipient, text):
         if recipient not in {*ROLES, "coordinator", "all"}:
             raise ValueError("Unknown recipient")
-        record = {"id": len(self.messages) + 1, "from": sender, "to": recipient, "text": text}
+        record = {
+            "id": len(self.messages) + 1,
+            "from": sender,
+            "to": recipient,
+            "text": text,
+        }
         self.messages.append(record)
         return record
 
     def publish(self, sender, topic, text, evidence_ids, book):
         if not topic.strip() or not evidence_ids:
             raise ValueError("A published fact needs a topic and citations")
-        owner = {"tender_reference": "tender", "tender_positions": "tender",
-                 "current_specification": "specification"}.get(topic)
+        owner = {
+            "tender_reference": "tender",
+            "tender_positions": "tender",
+            "current_specification": "specification",
+        }.get(topic)
         if owner and sender not in {owner, "coordinator"}:
             raise ValueError(f"Only {owner} or coordinator can publish {topic}")
         book.validate_references({"evidence_ids": evidence_ids})
-        fact = {"author": sender, "text": text, "evidence_ids": evidence_ids,
-                "version": self.facts.get(topic, {}).get("version", 0) + 1}
+        fact = {
+            "author": sender,
+            "text": text,
+            "evidence_ids": evidence_ids,
+            "version": self.facts.get(topic, {}).get("version", 0) + 1,
+        }
         self.facts[topic] = fact
         self.events.setdefault(topic, asyncio.Event()).set()
-        stages = {"current_specification": "specification", "erp_findings": "erp", "email_approvals": "email"}
+        stages = {
+            "current_specification": "specification",
+            "erp_findings": "erp",
+            "email_approvals": "email",
+        }
         if topic in stages:
-            self.progress.mark(stages[topic], evidence_ids=evidence_ids, source="cited_specialist_report")
+            self.progress.mark(
+                stages[topic],
+                evidence_ids=evidence_ids,
+                source="cited_specialist_report",
+            )
         if {"tender_reference", "tender_positions"} <= self.facts.keys():
-            self.progress.mark("tender", evidence_ids=[ref for key in ("tender_reference", "tender_positions")
-                for ref in self.facts[key]["evidence_ids"]], source="cited_specialist_report")
+            self.progress.mark(
+                "tender",
+                evidence_ids=[
+                    ref
+                    for key in ("tender_reference", "tender_positions")
+                    for ref in self.facts[key]["evidence_ids"]
+                ],
+                source="cited_specialist_report",
+            )
         if fact["version"] > 1:
-            for stage in ("calculation", "entry", "review", "tan_requested", "tan_received", "receipt"):
+            for stage in (
+                "calculation",
+                "entry",
+                "review",
+                "tan_requested",
+                "tan_received",
+                "receipt",
+            ):
                 self.progress.mark(stage, "pending", source="facts_revised")
-        self.send(sender, "all", f"Published {topic} version {fact['version']}; read notebook for citations.")
+        self.send(
+            sender,
+            "all",
+            f"Published {topic} version {fact['version']}; read notebook for citations.",
+        )
         return fact
 
     async def wait(self, topic, seconds):
@@ -109,16 +148,33 @@ class Team:
                 async with asyncio.timeout(seconds):
                     await self.events.setdefault(topic, asyncio.Event()).wait()
             except TimeoutError:
-                return {"status": "missing_dependency", "topic": topic,
-                        "next": "Report the missing prerequisite or request help; do not guess."}
-        return self.facts.get(topic, {"status": "missing_dependency", "topic": topic,
-            "next": "The producer finished without this prerequisite; report missing facts."})
+                return {
+                    "status": "missing_dependency",
+                    "topic": topic,
+                    "next": "Report the missing prerequisite or request help; do not guess.",
+                }
+        return self.facts.get(
+            topic,
+            {
+                "status": "missing_dependency",
+                "topic": topic,
+                "next": "The producer finished without this prerequisite; report missing facts.",
+            },
+        )
 
     def inbox(self, role, after=0):
-        return [m for m in self.messages if m["id"] > after and
-                m["to"] in {role, "all"} and m["from"] != role]
+        return [
+            m
+            for m in self.messages
+            if m["id"] > after and m["to"] in {role, "all"} and m["from"] != role
+        ]
 
     def snapshot(self):
-        return {"published_facts": self.facts, "messages": self.messages,
-                "specialists": self.status, "human_handoffs": self.handoffs,
-                "recovery": self.recovery, "progress": self.progress.snapshot()}
+        return {
+            "published_facts": self.facts,
+            "messages": self.messages,
+            "specialists": self.status,
+            "human_handoffs": self.handoffs,
+            "recovery": self.recovery,
+            "progress": self.progress.snapshot(),
+        }

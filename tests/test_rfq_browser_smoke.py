@@ -207,3 +207,76 @@ async def test_real_cdp_controls_frames_popup_download_and_screenshot(tmp_path):
         except subprocess.TimeoutExpired:
             process.kill()
             process.wait(timeout=5)
+
+
+async def test_navigation_feedback_for_stalled_login_and_same_url_progress(tmp_path):
+    from playwright.async_api import async_playwright
+    executable = os.environ.get("CHROME_BINARY") or shutil.which("google-chrome") or shutil.which("chromium")
+    assert executable, "Provide CHROME_BINARY for the optional smoke test"
+    profile = tmp_path / "profile"
+    process = subprocess.Popen([executable, "--headless=new", "--no-sandbox", "--disable-dev-shm-usage",
+        "--no-first-run", "--remote-debugging-port=0", f"--user-data-dir={profile}", "about:blank"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        active_port = profile / "DevToolsActivePort"
+        for _ in range(100):
+            if active_port.exists():
+                break
+            if process.poll() is not None:
+                pytest.fail("Local Chrome exited before exposing CDP")
+            await asyncio.sleep(.05)
+        port = active_port.read_text().splitlines()[0]
+        async with async_playwright() as playwright:
+            session = await BrowserSession.connect(playwright, [f"http://127.0.0.1:{port}"],
+                                                    EvidenceBook(), ["https://synthetic.test"])
+            page = session.page(0)
+            await page.set_content('''<button id="login">Log in</button>
+                <button id="delayed" onclick="setTimeout(() => document.querySelector('#status').textContent='Delayed step', 250)">Delayed</button>
+                <button id="next" onclick="document.querySelector('#status').textContent='Step 2'">Next</button>
+                <button id="route" onclick="location.hash='receipt'">Submit</button>
+                <p id="status"></p>
+                <form><label>Required code <input required></label><button type="submit">Continue</button></form>''')
+            # A paginated prior observation must not look like a page change.
+            observed = await session.act("observe", offset=5)
+            login = next(c["ref"] for c in observed["controls"] if c["text"] == "Log in")
+            stalled = await session.act("click", ref=login)
+            feedback = stalled["navigation_feedback"]
+            assert feedback["outcome"] == "stalled"
+            assert feedback["previous_url"] == feedback["current_url"]
+            assert "Log in" in feedback["previous_page_text"]
+            assert "required fields" in feedback["next"]
+
+            await page.locator("#login").evaluate("e => e.onclick = () => document.querySelector('#status').textContent = 'Invalid password'")
+            login = next(c["ref"] for c in stalled["controls"] if c["text"] == "Log in")
+            validation = await session.act("click", ref=login)
+            assert validation["navigation_feedback"]["outcome"] == "same_url_changed"
+            assert "Invalid password" in validation["text"]
+
+            delayed_ref = next(c["ref"] for c in validation["controls"] if c["text"] == "Delayed")
+            delayed = await session.act("click", ref=delayed_ref, expect_navigation=True)
+            assert delayed["navigation_feedback"]["outcome"] == "same_url_changed"
+            assert "Delayed step" in delayed["text"]
+
+            next_ref = next(c["ref"] for c in delayed["controls"] if c["text"] == "Next")
+            advanced = await session.act("click", ref=next_ref)
+            assert advanced["navigation_feedback"]["outcome"] == "same_url_changed"
+            assert "Step 2" in advanced["text"]
+
+            continue_ref = next(c["ref"] for c in advanced["controls"] if c["text"] == "Continue")
+            invalid = await session.act("click", ref=continue_ref)
+            assert invalid["navigation_feedback"]["outcome"] == "stalled"
+            required = next(c for c in invalid["controls"] if c["tag"] == "INPUT" and c["required"])
+            assert required["required"] and required["valid"] is False
+            assert required["validationMessage"]
+
+            submit = next(c["ref"] for c in invalid["controls"] if c["text"] == "Submit")
+            navigated = await session.act("click", ref=submit, expect_navigation=True)
+            assert navigated["navigation_feedback"]["outcome"] == "navigated"
+            assert navigated["navigation_feedback"]["current_url"].endswith("#receipt")
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)

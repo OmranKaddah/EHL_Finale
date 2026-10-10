@@ -38,6 +38,8 @@ pyee==13.0.1
     # via playwright
 pymupdf==1.28.2
     # via hackathon-toolkit (pyproject.toml)
+python-dotenv==1.1.1
+    # via hackathon-toolkit (pyproject.toml)
 referencing==0.37.0
     # via
     #   jsonschema

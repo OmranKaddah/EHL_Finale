@@ -11,7 +11,7 @@ import pytest
 
 from hackathon_toolkit.rfq.browser import BrowserSession, document_text, origin
 from hackathon_toolkit.rfq.evidence import EvidenceBook
-from hackathon_toolkit.rfq.runtime import (Agent, ModelClient, agent_loop, compact_messages, run_seconds,
+from hackathon_toolkit.rfq.runtime import (Agent, ModelClient, agent_loop, compact_messages, model_connection, run_agent, run_seconds,
                                           save_artifacts, tool_definitions, wire_answer)
 from test_rfq_pricing import bid
 
@@ -174,6 +174,42 @@ async def test_model_proxy_retries_transient_error_and_passes_tools(monkeypatch)
     assert calls[0].url.path == "/qwen/v1/chat/completions"
     assert calls[0].headers["authorization"] == "Bearer secret"
     assert json.loads(calls[0].content)["parallel_tool_calls"] is False
+
+
+def test_luna_requires_key_and_rejects_public_proxy_run():
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        model_connection("gpt-6-luna", {})
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        model_connection("gpt-6-luna", {"OPENAI_API_KEY": "  "})
+    with pytest.raises(ValueError, match="Atira test/scored runs"):
+        model_connection("gpt-6-luna", {"OPENAI_API_KEY": "secret", "CHALLENGE_RUN_TOKEN": "token"})
+    assert model_connection("gpt-6-luna", {"OPENAI_API_KEY": "secret"}) == (
+        "https://api.openai.com/v1", "secret", "gpt-6-luna", "openai")
+
+
+async def test_luna_missing_key_fails_before_browser_or_network(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        await run_agent(SimpleNamespace(max_seconds=1, model="gpt-6-luna"))
+
+
+async def test_luna_request_uses_supported_tool_parameters():
+    requests = []
+    async def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json={"choices": []})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        model = ModelClient(client, "https://api.openai.com/v1", "secret",
+                            model="gpt-6-luna", provider="openai")
+        await model.complete([{"role": "assistant", "content": "Continue",
+                               "reasoning_content": "proxy-only field"}], tool_definitions()[:1])
+    payload = json.loads(requests[0].content)
+    assert requests[0].url.path == "/v1/chat/completions"
+    assert payload["model"] == "gpt-6-luna"
+    assert payload["reasoning_effort"] == "none"
+    assert payload["max_completion_tokens"] == 8000
+    assert "max_tokens" not in payload
+    assert "reasoning_content" not in payload["messages"][0]
 
 
 def test_artifacts_redact_credentials_and_deadline_caps(agent, tmp_path):
