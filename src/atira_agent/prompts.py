@@ -17,9 +17,11 @@ Action arguments:
  scroll: {pixels}; tab: {tab}; frame: {frame}; observe: {}; wait: {seconds<=5}; screenshot: {}
  pixel_click: {observation:current id,x,y} only with a current screenshot; dialog: {accept:bool}
  inspect_controls: {refs:[up to 8 current control refs]} clicks model-selected independent row disclosures/tooltips
-       in order and returns newly revealed text with an observation ID after EACH click. Prefer this for a chosen
-       Q&A page's details and date buttons. It stops if the page/tab/dialog changes; never use for navigation,
-       login, form submission or signing. Cite the returned observation for each transient date/content.
+       in order. Each result contains before_observation, after_observation, row label/context, newly revealed text,
+       and citation_candidates whose observation/excerpt pairs are exact visible sources. Prefer this for a chosen
+       Q&A page's details and date buttons. When answer content and its date appear in separate UI states, use the
+       returned candidates from both inspections in the same record. It stops if the page/tab/dialog changes; never
+       use for navigation, login, form submission or signing. Never cite an element ref as an observation.
  read_links: {refs:[up to 6 current hyperlink refs]} reads only the specific records YOU selected from an observed
        result set in new tabs, then restores the result-set tab. Returns each observation ID, visible text and tab.
        Use this for selected ERP candidates or authorized mail results; record their evidence together. No discovery,
@@ -28,11 +30,14 @@ Action arguments:
  cite: {observation:current_observation.id (e.g. 'o12', NOT a control ref),excerpt:'exact visible quote',scope:{reference,position,revision,...}}
        OR {citations:[{observation,excerpt,scope},...]}. Creates evidence IDs e1, e2, etc.
  schema: {kind:one record kind} or {kinds:[...]} returns exact field schemas. Inspect before recording a new kind.
- record: {kind,data,citations?:[{observation,excerpt,scope}]} OR {records:[{kind,data,citations?:[...]},...]}.
+ record: {kind,data,citations?:[{observation,excerpt,scope}]}. The named record tool requires kind and data, so
+         submit one complete record per call; batch parsing is retained only for compatibility with old traces.
          Prefer this combined cite-and-record form: omit data.evidence when citations are supplied; the tool creates
          and attaches real evidence IDs automatically. Read per-record errors; successful records remain stored.
          rejected_records preserves incomplete extractions separately; they NEVER enter pricing. Correct missing
          fields (especially Q&A issued_at dates), then resubmit the whole record with the same id and valid evidence.
+         In a batch, every typed field belongs under its item's data object: {records:[{kind:'qa',data:{id:'Q-1',
+         issued_at:'2027-01-01T00:00:00Z'},citations:[...]}]}. Do not send empty records.
  inspect_evidence: {} or {observation:'o...'} to reread previously observed content.
  calculate: {partial:false/true}; prepare_submission: {partial:false/true}
  fill_answer: {fields:[{ref,path:'positions.0.unit_price',format:'de'},...]}; maps only computed answer values.
@@ -57,8 +62,11 @@ page merely because its label sounds positive, or solve a CAPTCHA/robot challeng
 not override the current DOM observation. Delayed overlays can appear after navigation, so observe again after a short
 wait before treating a newly blocked page as a navigation failure.
 Repeated labels belong to different rows: read control.context and frame/ref to choose the intended control.
-Revealed dates/tooltips can disappear on the next click; record that row while its date is visible, or cite the saved
-observation that showed it. Never repeatedly toggle rows trying to make mutually exclusive popovers stay open.
+Revealed dates/tooltips can disappear on the next click. The inspection result preserves citation candidates for each
+model-selected control: use only those returned observation/excerpt pairs (or another exact visible quote) when
+recording the row. Never emit record with no data. Never repeatedly toggle rows trying to make mutually exclusive
+popovers stay open. Pagination remains your decision: click only an observed next/load control after resolving the
+selected page's relevant rows.
 Password value is intentionally hidden: filled=true means it was entered successfully. Then click the login button;
 do not keep filling the password. Never use literal [REDACTED] as a value or credential handle.
 Use semantic labels/links in observations, not guessed URLs. Login secrets are opaque handles, never type or report

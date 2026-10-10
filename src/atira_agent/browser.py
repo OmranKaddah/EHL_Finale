@@ -13,7 +13,7 @@ from PIL import Image
 from playwright.async_api import TimeoutError as BrowserTimeoutError
 from playwright.async_api import async_playwright
 
-from .contracts import Observation
+from .contracts import InspectionCitation, InspectionResult, Observation
 from .documents import MAX_DOCUMENT_BYTES, read_document
 
 CONTROL_SELECTOR = "a,button,input,textarea,select,[role=button],[role=link],[role=checkbox],[role=combobox],[contenteditable=true],summary"
@@ -183,11 +183,14 @@ class BrowserSession:
         """Inspect a model-selected set of independent controls, observing after EVERY click."""
         if not isinstance(references, list) or not 1 <= len(references) <= 8 or len(set(references)) != len(references):
             raise ValueError("Select one to eight distinct currently observed controls")
-        selected = [(ref, self._ref(ref)) for ref in references]
+        if self.last_observation is None:
+            raise ValueError("Observe before selecting controls to inspect")
+        controls = {item["ref"]: item for item in self.last_observation.controls}
+        selected = [(ref, self._ref(ref), controls.get(ref, {})) for ref in references]
         before = self.last_observation
         urls = [frame.url for frame in self.page.frames]
         tab_count = len(self.pages)
-        for ref, element in selected:
+        for ref, element, control in selected:
             if self.dialogs or len(self.pages) != tab_count or [f.url for f in self.page.frames] != urls:
                 raise ValueError("Inspection changed page/tab/dialog; observe and choose the next action")
             if not await element.evaluate("e => e.isConnected"):
@@ -196,9 +199,53 @@ class BrowserSession:
             after = await self.observe()
             additions = [line[2:] for line in difflib.ndiff(before.text.splitlines(), after.text.splitlines())
                          if line.startswith("+ ")]
-            yield after, {"clicked_ref": ref, "observation": after.id,
-                          "revealed_text": "\n".join(additions), "dialog": after.dialog}
+            revealed = "\n".join(additions)
+            yield after, InspectionResult(
+                clicked_ref=ref,
+                control_label=str(control.get("label") or ""),
+                control_context=control.get("context"),
+                before_observation=before.id,
+                after_observation=after.id,
+                revealed_text=revealed,
+                citation_candidates=self._inspection_citations(before, after, control, additions),
+                dialog=after.dialog,
+            )
             before = after
+
+    @staticmethod
+    def _inspection_citations(before, after, control, additions) -> list[InspectionCitation]:
+        """Return only excerpts that are exact visible text in their observation.
+
+        Dates, tooltip bodies and row labels can occupy separate, mutually
+        exclusive UI states.  Returning both source IDs makes that relationship
+        durable without turning this generic browser helper into a Q&A parser.
+        """
+        candidates: list[InspectionCitation] = []
+        seen: set[tuple[str, str]] = set()
+
+        def add(observation, value):
+            if not isinstance(value, str):
+                return
+            value = value.strip()
+            if len(value) < 3:
+                return
+            # The ledger permits whitespace-normalized exact visible excerpts.
+            # Prefer a whole visible line when a context block is not contiguous.
+            options = [value, *(line.strip() for line in value.splitlines())]
+            for excerpt in options:
+                if len(excerpt) < 3 or excerpt not in observation.text:
+                    continue
+                key = (observation.id, excerpt)
+                if key not in seen:
+                    seen.add(key)
+                    candidates.append(InspectionCitation(observation=observation.id, excerpt=excerpt[:1200]))
+                return
+
+        add(before, control.get("context"))
+        add(before, control.get("label"))
+        for line in additions:
+            add(after, line)
+        return candidates
 
     async def read_links(self, references):
         """Visit only explicitly selected, currently observed hyperlinks; never discover more links."""

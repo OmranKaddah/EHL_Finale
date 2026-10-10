@@ -17,6 +17,12 @@ def test_serialized_nested_record_is_normalized():
     assert action.args["data"] == {"id": "r"}
 
 
+@pytest.mark.parametrize("args", [{}, {"kind": "qa"}, {"records": []}])
+def test_empty_record_actions_are_rejected_before_execution(args):
+    with pytest.raises(ValueError, match="record requires"):
+        parse_action(json.dumps({"action": "record", "args": args}))
+
+
 def test_named_tool_does_not_need_a_duplicate_action_field():
     action = parse_tool_call("fill", '{"ref":"o12-f0-e1","secret":"portal:password"}')
     assert action.action == "fill"
@@ -28,6 +34,8 @@ def test_named_tool_does_not_need_a_duplicate_action_field():
 def test_named_tool_schemas_cover_the_executor_contract():
     from atira_agent.contracts import AgentAction
     assert {x["function"]["name"] for x in model_tools()} == set(AgentAction.model_json_schema()["properties"]["action"]["enum"])
+    record = next(item["function"] for item in model_tools() if item["function"]["name"] == "record")
+    assert record["parameters"]["required"] == ["kind", "data"]
 
 
 def test_serialized_batch_and_citations_preserve_quotes():
@@ -38,6 +46,11 @@ def test_serialized_batch_and_citations_preserve_quotes():
     action = parse_action(json.dumps({"action": "record", "records": json.dumps(records)}))
     assert action.args["records"][0]["citations"] == [
         {"observation": "o11", "excerpt": quote, "scope": {"revision": "B"}}]
+
+
+def test_flat_batched_record_is_normalized_before_schema_validation():
+    action = parse_action(json.dumps({"action": "record", "records": [{"kind": "revision", "id": "r"}]}))
+    assert action.args["records"] == [{"kind": "revision", "data": {"id": "r"}}]
 
 
 @pytest.mark.parametrize("args", [

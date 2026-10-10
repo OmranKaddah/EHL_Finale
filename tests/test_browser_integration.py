@@ -17,8 +17,9 @@ from conftest import synthetic_records
 
 from atira_agent.browser import BrowserSession
 from atira_agent.config import Config
-from atira_agent.contracts import AgentAction, RunContext, SubmissionState
+from atira_agent.contracts import AgentAction, InspectionResult, RunContext, SubmissionState
 from atira_agent.dashboard import Dashboard
+from atira_agent.evidence import EvidenceLedger
 from atira_agent.orchestrator import Orchestrator
 from atira_agent.runtime import Deadline
 
@@ -299,8 +300,8 @@ async def test_selected_tooltips_are_observed_before_the_next_hides_them(telemet
         assert "Reply A" in initial.controls[0]["context"]
         assert "Reply B" in initial.controls[1]["context"]
         rows = [row async for row in browser.inspect_controls([x["ref"] for x in initial.controls])]
-        assert "Date A: 2027-02-01" in rows[0][1]["revealed_text"]
-        assert "Date B: 2027-02-02" in rows[1][1]["revealed_text"]
+        assert "Date A: 2027-02-01" in rows[0][1].revealed_text
+        assert "Date B: 2027-02-02" in rows[1][1].revealed_text
         assert "Date A" not in rows[1][0].text
         assert rows[0][0].id != rows[1][0].id
         with pytest.raises(ValueError, match="Stale"):
@@ -321,5 +322,52 @@ async def test_selected_tooltips_are_observed_before_the_next_hides_them(telemet
         assert "17" in (await browser.observe()).text
         await browser.page.set_content('<canvas aria-label="Visible accessibility description"></canvas>')
         assert "Visible accessibility description" in (await browser.observe()).text
+    finally:
+        await browser.close()
+
+
+@pytest.mark.browser
+@pytest.mark.parametrize("layout", ["table", "article"])
+async def test_inspection_result_retains_atomic_citations_for_transient_qa_details(telemetry, layout):
+    """A row label and its issued date may only be visible in separate UI states."""
+    run = RunContext(challenge_id="rfq", brief="Synthetic Q&A inspection", access=[],
+                     submission={"kind": "site", "url": "http://localhost"}, answer_schema={})
+    browser = BrowserSession(Config(False, (), "qwen", "qwen", "http://localhost", "local"),
+                             run, telemetry, headful=False)
+    try:
+        await browser.start()
+        if layout == "table":
+            content = '''<table><tr><td>Answer 8153 withdraws answer 8152</td>
+              <td><button onclick="document.getElementById('issued').innerText='Issued: 2027-02-01T10:00:00Z'">Reveal issue date</button></td></tr>
+              </table><p id="issued"></p><button onclick="document.body.innerHTML='Page two complete'">Next page</button>'''
+        else:
+            content = '''<article><h3>Answer 8153 withdraws answer 8152</h3>
+              <button onclick="document.querySelector('output').innerText='Issued: 2027-02-01T10:00:00Z'">Show timestamp</button>
+              </article><output></output><nav><button onclick="document.body.innerHTML='Page two complete'">Continue results</button></nav>'''
+        await browser.page.set_content(content)
+        before = await browser.observe()
+        date_control = next(item for item in before.controls if item["label"] in {"Reveal issue date", "Show timestamp"})
+        after, result = [row async for row in browser.inspect_controls([date_control["ref"]])][0]
+        assert isinstance(result, InspectionResult)
+        assert result.before_observation == before.id
+        assert result.after_observation == after.id
+        assert "2027-02-01T10:00:00Z" in result.revealed_text
+        citations = {(item.observation, item.excerpt) for item in result.citation_candidates}
+        assert any(observation == before.id and "Answer 8153" in excerpt for observation, excerpt in citations)
+        assert any(observation == after.id and "2027-02-01T10:00:00Z" in excerpt for observation, excerpt in citations)
+
+        ledger = EvidenceLedger(telemetry)
+        ledger.observe(before)
+        ledger.observe(after)
+        for citation in result.citation_candidates:
+            ledger.cite(citation.observation, citation.excerpt)
+        with pytest.raises(ValueError, match="exact visible excerpt"):
+            ledger.cite(after.id, "Invented answer 9999")
+
+        # Inspection itself does not choose to paginate. The observed model must do so explicitly.
+        next_control = next(item for item in after.controls if item["label"] in {"Next page", "Continue results"})
+        assert "Page two complete" not in after.text
+        await browser.act("click", {"ref": next_control["ref"]})
+        assert "Page two complete" in (await browser.observe()).text
     finally:
         await browser.close()

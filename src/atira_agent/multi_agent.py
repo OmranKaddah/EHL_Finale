@@ -178,8 +178,9 @@ class MultiAgentCoordinator:
         if role == "tender":
             self.specialists[role].controller.role_instruction += (
                 " This is a focused evidence-only rehearsal: after login, go directly to the observed Q&A/clarification "
-                "view and traverse its relevant pages. Reveal date/content details and continue pagination before recording "
-                "any Q&A records; cite only the observation ID returned by the immediately preceding inspection result. "
+                "view and traverse its relevant pages. Reveal date/content details, record the current page's relevant Q&A "
+                "facts, then choose observed pagination controls. Use the exact citation_candidates returned by the relevant inspection results, including "
+                "both answer and date observations when they differ. Never emit an empty record action. "
                 "Do not inspect tender documents unless an observed Q&A entry explicitly requires it."
             )
         self.root_telemetry.emit("research_focus", role=role)

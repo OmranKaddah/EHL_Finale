@@ -9,6 +9,7 @@ from urllib.parse import urljoin, urlsplit
 
 from .contracts import RECORD_TYPES, Observation, SubmissionState
 from .evidence import EvidenceLedger
+from .models import normalize_record_item
 from .pricing import calculate
 from .prompts import SYSTEM
 from .submit import Submission
@@ -158,7 +159,7 @@ class Orchestrator:
                 async for observation, result in self.browser.inspect_controls(args["refs"]):
                     self.observation = observation
                     self.ledger.observe(observation)
-                    results.append(result)
+                    results.append(result.model_dump(mode="json"))
             except (ValueError, TimeoutError) as exc:
                 results.append({"error": safe_error(exc, self.telemetry.redactor)})
             return results
@@ -170,7 +171,17 @@ class Orchestrator:
             return [{"id": fact.id, "excerpt": fact.excerpt} for fact in [
                 self.ledger.cite(item["observation"], item["excerpt"], item.get("scope")) for item in items]]
         if name == "record":
-            items = args.get("records", [args])
+            if "records" in args:
+                if not args["records"]:
+                    raise ValueError("record requires one or more records; an empty records list is invalid")
+                items = [normalize_record_item(item) if isinstance(item, dict) else item for item in args["records"]]
+            elif "data" in args:
+                items = [args]
+            else:
+                item = normalize_record_item(args)
+                if "data" not in item:
+                    raise ValueError("record requires data or a nonempty records list")
+                items = [item]
             results = []
             for item in items:
                 data = item.get("data")

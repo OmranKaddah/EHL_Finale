@@ -123,3 +123,21 @@ The optional Clef proxy returned `NotFoundError` on the first popup-classificati
 unreachable because this machine could not resolve `ehl-challenge.atira.ai`. The failure was nonblocking and did not
 alter browser actions. Clef remains limited to sanitized, advisory popup classification; its endpoint contract must
 be verified against a reachable Atira proxy before claiming a successful Clef-assisted rehearsal.
+
+## Tender evidence recovery — 2026-10-10
+
+The transient-control helper now returns typed before/after observation IDs, the selected row context, revealed text,
+and exact citation candidates. It does not classify the result or select pagination; Qwen still selects the controls,
+interprets the row, and creates the typed Q&A record. Empty record calls fail with a clear error, while the older flat
+batch transport is normalized before the same evidence and Pydantic validation.
+
+- Local checks: `ruff check src tests` passed; 25 focused model/multi-agent tests and two browser-layout tests passed.
+  The synthetic layouts cover separate answer/date UI states, explicit pagination, stale-control handling, and rejection
+  of unsupported citations.
+- `artifacts/qa-date-rehearsal-8/` and `artifacts/qa-date-rehearsal-9/` were headful, Tender-only, research-only
+  runs through the local Atira proxy. Both logged in, recovered from the delayed survey modal, reached Q&A page 2,
+  and inspected answer/date batches without any signing action. They then exposed an empty Qwen `record` tool call;
+  the new error was explicit and no unsupported evidence entered the ledger.
+- The follow-up code requires `kind` and `data` for the named `record` tool, while retaining normalized batch support.
+  `qa-date-rehearsal-10` did not start an agent trace because the local runner stalled before browser initialization;
+  it performed no portal interaction. A live confirmation of successful cited Q&A records remains pending.

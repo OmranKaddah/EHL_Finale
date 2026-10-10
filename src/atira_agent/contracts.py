@@ -56,6 +56,30 @@ class Observation(StrictModel):
     observed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class InspectionCitation(StrictModel):
+    """An exact, durable excerpt made available after a transient UI inspection."""
+
+    observation: str
+    excerpt: str = Field(min_length=3, max_length=1200)
+
+
+class InspectionResult(StrictModel):
+    """Evidence preserved for one model-selected disclosure or tooltip control.
+
+    The browser reports what changed and where it was visibly observed.  It
+    deliberately does not interpret the row as a particular tender fact.
+    """
+
+    clicked_ref: str
+    control_label: str
+    control_context: str | None = None
+    before_observation: str
+    after_observation: str
+    revealed_text: str = ""
+    citation_candidates: list[InspectionCitation] = Field(default_factory=list)
+    dialog: dict[str, Any] | None = None
+
+
 class AgentAction(StrictModel):
     action: Literal[
         "navigate", "click", "fill", "select", "check", "press", "scroll", "tab", "frame",

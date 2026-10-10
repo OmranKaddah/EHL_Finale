@@ -11,6 +11,22 @@ from .contracts import AgentAction
 from .tool_specs import model_tools
 
 
+def normalize_record_item(item: dict) -> dict:
+    """Accept a flat named-tool record while retaining the canonical envelope.
+
+    Tool-call models occasionally place typed record fields beside ``kind`` in
+    a batch rather than under ``data``.  This is a transport variation, not a
+    business inference: it is normalized before the normal schema and evidence
+    checks run.  A record without actual typed fields still fails clearly.
+    """
+    if "data" in item or "kind" not in item:
+        return item
+    data = {key: value for key, value in item.items() if key not in {"kind", "citations", "summary"}}
+    if not data:
+        return item
+    return {**{key: value for key, value in item.items() if key in {"kind", "citations", "summary"}}, "data": data}
+
+
 def parse_action(payload: str) -> AgentAction:
     """Normalize harmless transport variations; the executor still validates business inputs."""
     data = json.loads(payload)
@@ -39,9 +55,11 @@ def parse_action(payload: str) -> AgentAction:
             raise ValueError(f"{key} must be a JSON {expected.__name__}")
         parent[key] = value
 
-    def record(item):
+    def record(item, *, require_data=False):
         if not isinstance(item, dict):
             raise ValueError("Each record must be an object")
+        if require_data and "data" not in item:
+            raise ValueError("record requires data for every record item")
         container(item, "data", dict)
         container(item, "citations", list)
         for citation in item.get("citations", []):
@@ -49,11 +67,26 @@ def parse_action(payload: str) -> AgentAction:
                 raise ValueError("Each citation must be an object")
             container(citation, "scope", dict)
 
-    if action in {"record", "cite"}:
-        record(args)
+    if action == "record":
         container(args, "records", list)
-        for item in args.get("records", []):
-            record(item)
+        if "records" in args:
+            if "data" in args:
+                raise ValueError("record must use either data or records, not both")
+            if not args["records"]:
+                raise ValueError("record requires a nonempty records list")
+            args["records"] = [normalize_record_item(item) if isinstance(item, dict) else item
+                               for item in args["records"]]
+            for item in args["records"]:
+                record(item, require_data=True)
+        else:
+            args = normalize_record_item(args)
+            record(args, require_data=True)
+    if action == "cite":
+        container(args, "citations", list)
+        for citation in args.get("citations", []):
+            if not isinstance(citation, dict):
+                raise ValueError("Each citation must be an object")
+            container(citation, "scope", dict)
     if action == "fill_answer":
         container(args, "fields", list)
     if action in {"inspect_controls", "read_links"}:
