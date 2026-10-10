@@ -1,0 +1,51 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4K68ZJABCRKHP406VYEK59S",
+  "strategy": "manual-commit",
+  "branch": "fresh-start",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "docs/ARCHITECTURE.md",
+    "docs/ATIRA_CONTRACT.md",
+    "docs/DEBUGGING.md",
+    "docs/KNOWN_GAPS.md",
+    "docs/REHEARSAL_REPORT.md",
+    "docs/RUNBOOK_WINDOWS.md",
+    "scripts/atira-debug.py",
+    "scripts/package_check.py",
+    "src/atira_agent/browser.py",
+    "src/atira_agent/business_rules.py",
+    "src/atira_agent/cli.py",
+    "src/atira_agent/contracts.py",
+    "src/atira_agent/dashboard.py",
+    "src/atira_agent/models.py",
+    "src/atira_agent/orchestrator.py",
+    "src/atira_agent/pricing.py",
+    "src/atira_agent/prompts.py",
+    "src/atira_agent/submit.py",
+    "src/atira_agent/telemetry.py",
+    "src/atira_agent/tool_specs.py",
+    "tests/test_browser_integration.py",
+    "tests/test_model_contract.py",
+    "tests/test_package.py",
+    "tests/test_pricing.py",
+    "tests/test_submission.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 105240,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 6522189,
+    "output_tokens": 42483,
+    "api_call_count": 48
+  }
+}
