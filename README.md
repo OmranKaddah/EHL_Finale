@@ -68,8 +68,9 @@ paid-provider configuration requires both `ATIRA_MODEL_PROVIDER=openai` and `ATI
 and an Atira proxy endpoint. Do not enable it without approval. Merely having a key does not activate paid inference.
 
 When Atira supplies `CLEF_BASE_URL` and `CLEF_API_KEY`, Clef classifies only sanitized screenshots that look like a
-blocking popup or visual gate. Its result is advisory context for Qwen; it never clicks controls, navigates, solves a
-CAPTCHA, or receives a credential/TAN screenshot.
+blocking popup. Its result is advisory context for Qwen; it never clicks controls, navigates, solves a CAPTCHA, or
+receives a credential/TAN screenshot. An explicitly observed robot/CAPTCHA gate is classified locally and skipped
+without any visual-model request or interaction.
 
 Configuration: `ATIRA_BUDGET_SECONDS` (maximum 1200), `ATIRA_SUBMISSION_RESERVE` (default 180),
 `ATIRA_DASHBOARD_PORT` (default 8787). Sandbox platform expiry is an additional hard bound. Local scouting credential

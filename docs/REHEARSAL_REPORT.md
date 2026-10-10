@@ -102,3 +102,24 @@ It has **not** yet been exercised in public scouting or an unscored sandbox run.
 not a claim about live Qwen latency: sequential 490 seconds, dependency-aware parallel 305 seconds under the declared
 synthetic durations. When two specialists fail before the reserve, the coordinator runs one bounded sequential
 recovery pass using an existing supplied browser.
+
+## Four-browser public scouting rehearsal — 2026-10-10
+
+Command: `./scripts/run-local.ps1 -MaxSteps 180 -TraceDir artifacts/multi-agent-rehearsal-1`.
+
+This was a local, headful scouting rehearsal, not a sandbox evaluation and not a scored submission. Qwen dispatched
+the four opaque site assignments and the four specialists concurrently reached their own login and consent flows.
+The tender specialist registered participation, closed a delayed survey modal, opened the tender record and its
+document/Q&A menu. The specifications specialist reached the document register. The ERP specialist handled a
+transient service page, and the mail specialist reached the inbox. Per-agent screenshots and redacted event streams
+are in the ignored `artifacts/multi-agent-rehearsal-1/` directory.
+
+The ERP and mail pages then exposed explicit robot/CAPTCHA-style verification gates. The implementation now records
+those as `verification_gate_skipped` and ends the affected research specialist without dragging, ticking, copying a
+visual challenge, or attempting to bypass it. The coordinator can continue with independent evidence, but a final
+submitting controller fails closed if a required gate remains. This is a safety boundary, not a completed bid.
+
+The optional Clef proxy returned `NotFoundError` on the first popup-classification requests and subsequently became
+unreachable because this machine could not resolve `ehl-challenge.atira.ai`. The failure was nonblocking and did not
+alter browser actions. Clef remains limited to sanitized, advisory popup classification; its endpoint contract must
+be verified against a reachable Atira proxy before claiming a successful Clef-assisted rehearsal.

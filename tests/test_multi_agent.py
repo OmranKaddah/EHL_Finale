@@ -37,6 +37,16 @@ def test_popup_classifier_only_runs_for_probable_blockers():
     assert PopupClassifier.needed(Observation())
 
 
+def test_verification_gate_is_classified_without_a_visual_model_call():
+    class Observation:
+        controls = []
+        text = "Zum Entsperren ganz nach rechts ziehen — Ich bin kein Roboter"
+        id = "o7"
+
+    assert PopupClassifier.verification_gate(Observation())
+    assert not PopupClassifier.needed(Observation())
+
+
 async def test_multi_dashboard_serves_each_agent_state(tmp_path):
     root = Telemetry(tmp_path / "root", Redactor(), console=False)
     tender = Telemetry(tmp_path / "tender", root.redactor, console=False, agent="tender")

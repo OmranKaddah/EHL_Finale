@@ -89,6 +89,15 @@ class Orchestrator:
                     self.observation = await asyncio.wait_for(self.browser.observe(), self.deadline.timeout(25))
                     self.ledger.observe(self.observation)
                     self.popup_classification = await self._classify_popup(self.observation)
+                if self.popup_classification and self.popup_classification.get("kind") == "verification_gate":
+                    self.telemetry.emit("verification_gate_skipped", observation=self.observation.id,
+                                        reason=self.popup_classification["reason"])
+                    self.stage = "blocked_by_verification"
+                    self.telemetry.emit("stage_changed", stage=self.stage, remaining=self.deadline.remaining)
+                    # A specialist can finish safely and let the coordinator
+                    # continue with evidence from the remaining supplied sites.
+                    # A submitting controller must fail closed instead.
+                    return self.research_only
                 action = await self.model.decide(self.messages(), self.deadline)
                 self.telemetry.emit("model_decision", **action.model_dump(), remaining=self.deadline.remaining)
                 signature = action_signature(action, self.observation)

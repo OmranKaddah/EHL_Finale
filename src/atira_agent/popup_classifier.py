@@ -20,13 +20,37 @@ class PopupClassifier:
                        if config.clef_url and config.clef_key else None)
 
     @staticmethod
+    def verification_gate(observation) -> bool:
+        """Recognize an observed verification challenge without interacting with it.
+
+        This is intentionally conservative.  It is a safety boundary, rather
+        than a site adapter: an agent may describe and report an observed gate,
+        but it must never drag a slider, tick a robot check box, copy a visual
+        challenge value, or otherwise attempt to pass it.
+        """
+        text = observation.text.casefold()
+        terms = ("captcha", "i am not a robot", "i'm not a robot", "ich bin kein roboter",
+                 "robot challenge", "verification challenge")
+        return any(term in text for term in terms)
+
+    @staticmethod
     def needed(observation) -> bool:
         text = observation.text.lower()
+        if PopupClassifier.verification_gate(observation):
+            return False
         modal = any(item.get("inside_modal") or item.get("blocked_by_modal") for item in observation.controls)
         words = ("cookie", "consent", "survey", "notice", "hinweis", "robot", "captcha", "verification", "overlay")
         return modal or any(word in text for word in words)
 
     async def classify(self, image_base64: str | None, observation) -> dict | None:
+        if self.verification_gate(observation):
+            result = {
+                "kind": "verification_gate",
+                "reason": "Observed robot or CAPTCHA verification gate",
+                "safe_next_step": "do_not_interact_report_unresolved",
+            }
+            self.telemetry.emit("popup_classified", observation=observation.id, classification=result)
+            return result
         if not self.client or not image_base64 or not self.needed(observation):
             return None
         prompt = (
@@ -52,7 +76,10 @@ class PopupClassifier:
             self.telemetry.emit("popup_classified", observation=observation.id, classification=result)
             return result
         except Exception as exc:
-            self.telemetry.emit("popup_classification_unavailable", error=type(exc).__name__)
+            # Do not log response bodies, endpoint URLs, headers, or request
+            # payloads: those can contain credentials or image-derived data.
+            self.telemetry.emit("popup_classification_unavailable", error=type(exc).__name__,
+                                status=getattr(exc, "status_code", None))
             return None
 
     async def close(self):
