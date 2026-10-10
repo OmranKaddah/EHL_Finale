@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KYRPC9P0MX0VHJ371AAZAD",
+  "strategy": "manual-commit",
+  "branch": "fresh-start",
+  "checkpoints_count": 8,
+  "files_touched": [
+    "src/atira_agent/browser.py",
+    "src/atira_agent/cli.py",
+    "src/atira_agent/models.py",
+    "src/atira_agent/multi_agent.py",
+    "src/atira_agent/orchestrator.py",
+    "src/atira_agent/prompts.py",
+    "src/atira_agent/tool_specs.py",
+    "tests/test_model_contract.py",
+    "tests/test_multi_agent.py",
+    "tests/test_progress.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 1068981,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 39215538,
+    "output_tokens": 94669,
+    "api_call_count": 302,
+    "subagent_tokens_complete": true
+  }
+}
