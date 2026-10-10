@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KACF4KPJJA9ZA2C8N1TT8D",
+  "strategy": "manual-commit",
+  "branch": "fresh-start",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "README.md",
+    "agent.json",
+    "docs/ARCHITECTURE.md",
+    "docs/DEBUGGING.md",
+    "docs/REHEARSAL_REPORT.md",
+    "src/atira_agent/browser.py",
+    "src/atira_agent/cli.py",
+    "src/atira_agent/config.py",
+    "src/atira_agent/dashboard.py",
+    "src/atira_agent/evidence.py",
+    "src/atira_agent/models.py",
+    "src/atira_agent/multi_agent.py",
+    "src/atira_agent/orchestrator.py",
+    "src/atira_agent/popup_classifier.py",
+    "src/atira_agent/telemetry.py",
+    "tests/test_multi_agent.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 948481,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 24875473,
+    "output_tokens": 168160,
+    "api_call_count": 71
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4KACF4KPJJA9ZA2C8N1TT8D",
+  "session_id": "01a12684-607c-7d32-aa33-54c278f15363",
+  "strategy": "manual-commit",
+  "created_at": "2026-10-10T16:30:24.3504807Z",
+  "branch": "fresh-start",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "README.md",
+    "agent.json",
+    "docs/ARCHITECTURE.md",
+    "docs/DEBUGGING.md",
+    "docs/REHEARSAL_REPORT.md",
+    "src/atira_agent/browser.py",
+    "src/atira_agent/cli.py",
+    "src/atira_agent/config.py",
+    "src/atira_agent/dashboard.py",
+    "src/atira_agent/evidence.py",
+    "src/atira_agent/models.py",
+    "src/atira_agent/multi_agent.py",
+    "src/atira_agent/orchestrator.py",
+    "src/atira_agent/popup_classifier.py",
+    "src/atira_agent/telemetry.py",
+    "tests/test_multi_agent.py"
+  ],
+  "agent": "Codex",
+  "model": "gpt-5.6-terra",
+  "turn_id": "cb0cc5833458",
+  "compact_transcript_start": 0,
+  "token_usage": {
+    "input_tokens": 948481,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 24875473,
+    "output_tokens": 168160,
+    "api_call_count": 71
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-10-10T16:30:24.2979164Z",
+    "agent_lines": 113,
+    "agent_removed": 1,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 86,
+    "total_committed": 113,
+    "total_lines_changed": 200,
+    "agent_percentage": 56.99999999999999,
+    "metric_version": 2
+  },
+  "prompt_attributions": [
+    {
+      "checkpoint_number": 1,
+      "user_lines_added": 355,
+      "user_lines_removed": 86,
+      "agent_lines_added": 0,
+      "agent_lines_removed": 0,
+      "user_added_per_file": {
+        "README.md": 12,
+        "agent.json": 1,
+        "docs/ARCHITECTURE.md": 17,
+        "docs/DEBUGGING.md": 6,
+        "src/atira_agent/browser.py": 16,
+        "src/atira_agent/cli.py": 18,
+        "src/atira_agent/dashboard.py": 26,
+        "src/atira_agent/evidence.py": 1,
+        "src/atira_agent/multi_agent.py": 192,
+        "src/atira_agent/orchestrator.py": 22,
+        "src/atira_agent/telemetry.py": 4,
+        "tests/test_multi_agent.py": 40
+      },
+      "user_removed_per_file": {
+        "README.md": 5,
+        "agent.json": 1,
+        "docs/ARCHITECTURE.md": 9,
+        "docs/DEBUGGING.md": 3,
+        "src/atira_agent/browser.py": 7,
+        "src/atira_agent/cli.py": 14,
+        "src/atira_agent/dashboard.py": 40,
+        "src/atira_agent/evidence.py": 1,
+        "src/atira_agent/orchestrator.py": 4,
+        "src/atira_agent/telemetry.py": 2
+      }
+    }
+  ]
+}
