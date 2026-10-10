@@ -3,7 +3,7 @@
   "checkpoint_id": "01M4KSWP5XE9ZQN76WV6WGRA0Q",
   "strategy": "manual-commit",
   "branch": "Leonie",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "docs/PHASE1_REVIEW_GATE.md"
   ],
@@ -14,13 +14,20 @@
       "compact_transcript": "/0/transcript.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "compact_transcript": "/1/transcript.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": "/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 47738,
-    "cache_creation_tokens": 0,
-    "cache_read_tokens": 580864,
-    "output_tokens": 3523,
-    "api_call_count": 14
+    "input_tokens": 47770,
+    "cache_creation_tokens": 114889,
+    "cache_read_tokens": 2912317,
+    "output_tokens": 97879,
+    "api_call_count": 30
   }
 }
