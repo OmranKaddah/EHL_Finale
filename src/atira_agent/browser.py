@@ -16,7 +16,7 @@ from playwright.async_api import async_playwright
 from .contracts import InspectionCitation, InspectionResult, Observation
 from .documents import MAX_DOCUMENT_BYTES, read_document
 
-CONTROL_SELECTOR = "a,button,input,textarea,select,[role=button],[role=link],[role=checkbox],[role=combobox],[contenteditable=true],summary"
+CONTROL_SELECTOR = "a,button,input,textarea,select,[role=button],[role=link],[role=checkbox],[role=combobox],[role=slider],[contenteditable=true],summary"
 CONTROL_INFO = """e => {
  const r=e.getBoundingClientRect(), s=getComputedStyle(e);
  if (!r.width || !r.height || s.visibility==='hidden' || s.display==='none') return null;
@@ -436,6 +436,89 @@ class BrowserSession:
             if not self.last_image_size or not (0 <= x < self.last_image_size[0] and 0 <= y < self.last_image_size[1]):
                 raise ValueError("Click outside screenshot")
             await self.page.mouse.click(x, y)
+        elif name == "drag":
+            # Generic unlock-slider drag. Supports DOM refs (preferred) and
+            # screenshot-pixel fallback. Never executes model JavaScript;
+            # only fixed unlock sequences (range max + input/change events).
+            start_element = None
+            if args.get("ref"):
+                start_element = self._ref(args["ref"])
+                box = await start_element.bounding_box()
+                if not box:
+                    raise ValueError("Drag source is not visible; observe again")
+                start_x, start_y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+            elif args.get("observation") is not None and args.get("x") is not None and args.get("y") is not None:
+                if not self.last_image or not self.last_observation or args.get("observation") != self.last_observation.id:
+                    raise ValueError("Pixel drags require the current screenshot observation")
+                start_x, start_y = int(args["x"]), int(args["y"])
+                if not self.last_image_size or not (0 <= start_x < self.last_image_size[0] and 0 <= start_y < self.last_image_size[1]):
+                    raise ValueError("Drag start outside screenshot")
+            else:
+                raise ValueError("drag requires ref or current screenshot x/y")
+            if args.get("to_ref"):
+                dest_element = self._ref(args["to_ref"])
+                dest_box = await dest_element.bounding_box()
+                if not dest_box:
+                    raise ValueError("Drag destination is not visible; observe again")
+                end_x, end_y = dest_box["x"] + dest_box["width"] / 2, dest_box["y"] + dest_box["height"] / 2
+            elif args.get("to_x") is not None and args.get("to_y") is not None:
+                if not self.last_image or not self.last_observation or args.get("observation") != self.last_observation.id:
+                    raise ValueError("Pixel drags require the current screenshot observation")
+                end_x, end_y = int(args["to_x"]), int(args["to_y"])
+                if not self.last_image_size or not (0 <= end_x < self.last_image_size[0] and 0 <= end_y < self.last_image_size[1]):
+                    raise ValueError("Drag destination outside screenshot")
+            else:
+                dx = int(args.get("dx", 350))
+                dy = int(args.get("dy", 0))
+                dx = max(-1000, min(1000, dx))
+                dy = max(-500, min(500, dy))
+                if dx == 0 and dy == 0:
+                    raise ValueError("drag needs to_ref, to_x/to_y, or a nonzero dx/dy")
+                # Clamp an unlock drag to the viewport so a large default
+                # still lands on the track's right end instead of missing.
+                viewport = self.page.viewport_size or {"width": 1280, "height": 800}
+                end_x = min(max(0, start_x + dx), viewport["width"] - 1)
+                end_y = min(max(0, start_y + dy), viewport["height"] - 1)
+            await self.page.mouse.move(start_x, start_y)
+            await self.page.mouse.down()
+            try:
+                steps = 20
+                for step in range(1, steps + 1):
+                    await self.page.mouse.move(
+                        start_x + (end_x - start_x) * step / steps,
+                        start_y + (end_y - start_y) * step / steps)
+                    await asyncio.sleep(0.01)
+            finally:
+                await self.page.mouse.up()
+            if start_element is not None:
+                # Native range unlocks often only listen for input/change.
+                # Setting a fixed max value is not model code execution.
+                try:
+                    await start_element.evaluate(
+                        """e => {
+                          const r = (e.tagName === 'INPUT' && e.type === 'range') ? e
+                            : e.querySelector ? (e.querySelector("input[type=range]") || e) : e;
+                          if (r && r.tagName === 'INPUT' && r.type === 'range') {
+                            r.focus();
+                            const max = r.max !== '' ? Number(r.max) : 100;
+                            r.value = String(max);
+                            r.dispatchEvent(new Event('input', {bubbles: true}));
+                            r.dispatchEvent(new Event('change', {bubbles: true}));
+                            return 'range-max';
+                          }
+                          const t = e.closest ? (e.closest("[role=slider]") || e) : e;
+                          if (t && t.getAttribute && t.getAttribute('role') === 'slider') {
+                            t.focus();
+                            t.dispatchEvent(new KeyboardEvent('keydown', {key: 'End', bubbles: true}));
+                            t.dispatchEvent(new KeyboardEvent('keyup', {key: 'End', bubbles: true}));
+                            return 'slider-end';
+                          }
+                          return 'mouse-only';
+                        }""")
+                except Exception:
+                    pass
+            self.telemetry.emit("browser_dragged", start=[round(start_x), round(start_y)],
+                                end=[round(end_x), round(end_y)])
         elif name == "dialog":
             if not self.dialogs:
                 raise ValueError("No browser dialog")

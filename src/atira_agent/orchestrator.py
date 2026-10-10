@@ -92,14 +92,13 @@ class Orchestrator:
                     self.ledger.observe(self.observation)
                     self.popup_classification = await self._classify_popup(self.observation)
                 if self.popup_classification and self.popup_classification.get("kind") == "verification_gate":
-                    self.telemetry.emit("verification_gate_skipped", observation=self.observation.id,
-                                        reason=self.popup_classification["reason"])
-                    self.stage = "blocked_by_verification"
-                    self.telemetry.emit("stage_changed", stage=self.stage, remaining=self.deadline.remaining)
-                    # A specialist can finish safely and let the coordinator
-                    # continue with evidence from the remaining supplied sites.
-                    # A submitting controller must fail closed instead.
-                    return self.research_only
+                    if self.stage != "solving_verification":
+                        self.stage = "solving_verification"
+                        self.telemetry.emit("stage_changed", stage=self.stage, remaining=self.deadline.remaining)
+                    self.telemetry.emit("verification_gate_detected", observation=self.observation.id,
+                                        reason=self.popup_classification.get("reason", ""))
+                    # Do not skip: the model solves the observed gate with
+                    # drag + check + fill + click (see SYSTEM guidance).
                 action = await self.model.decide(self.messages(), self.deadline)
                 self.telemetry.emit("model_decision", **action.model_dump(), remaining=self.deadline.remaining)
                 signature = action_signature(action, self.observation)
@@ -143,7 +142,7 @@ class Orchestrator:
         if self.research_only and name in {"calculate", "prepare_submission", "fill_answer", "request_tan",
                                            "capture_tan", "sign", "receipt", "api_submit"}:
             raise ValueError("This specialist publishes evidence only; the central orchestrator owns pricing and signing")
-        if name in {"click", "fill", "select", "check", "press"} and self.observation:
+        if name in {"click", "fill", "select", "check", "press", "drag"} and self.observation:
             control = next((item for item in self.observation.controls if item["ref"] == args.get("ref")), None)
             if control and control.get("blocked_by_modal"):
                 modal_labels = [str(item.get("label") or "control") for item in self.observation.controls

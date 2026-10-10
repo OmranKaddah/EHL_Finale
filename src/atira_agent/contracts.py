@@ -83,7 +83,7 @@ class InspectionResult(StrictModel):
 class AgentAction(StrictModel):
     action: Literal[
         "navigate", "click", "fill", "select", "check", "press", "scroll", "tab", "frame",
-        "observe", "wait", "screenshot", "pixel_click", "dialog", "document", "cite", "record",
+        "observe", "wait", "screenshot", "pixel_click", "drag", "dialog", "document", "cite", "record",
         "schema", "calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan",
         "sign", "receipt", "api_submit", "stage", "inspect_evidence", "inspect_controls", "read_links",
     ]

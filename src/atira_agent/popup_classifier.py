@@ -26,7 +26,10 @@ class PopupClassifier:
         """
         text = observation.text.casefold()
         terms = ("captcha", "i am not a robot", "i'm not a robot", "ich bin kein roboter",
-                 "robot challenge", "verification challenge")
+                 "robot challenge", "verification challenge",
+                 "zum entsperren", "ganz nach rechts", "empfangsnummer",
+                 "betriebsbedingungen", "systemmitteilung", "geschützter bereich",
+                 "ich bin kein", "kein roboter")
         return any(term in text for term in terms)
 
     @staticmethod
@@ -42,8 +45,10 @@ class PopupClassifier:
         if self.verification_gate(observation):
             result = {
                 "kind": "verification_gate",
-                "reason": "Observed robot or CAPTCHA verification gate",
-                "safe_next_step": "inspect_observed_popup_control",
+                "reason": ("Observed verification gate: drag unlock slider fully right, "
+                           "check robot checkbox, copy Empfangsnummer into protected input, "
+                           "accept Betriebsbedingungen, then Weiter"),
+                "safe_next_step": "solve_observed_verification_gate",
             }
             self.telemetry.emit("popup_classified", observation=observation.id, classification=result)
             return result

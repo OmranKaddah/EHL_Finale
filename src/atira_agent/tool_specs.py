@@ -17,6 +17,7 @@ def model_tools():
         "wait": ("Wait at most five seconds for a transient UI change", {"seconds": "number"}, []),
         "screenshot": ("Get a fresh masked screenshot", {}, []),
         "pixel_click": ("Click coordinates grounded in the current screenshot", {"observation": "string", "x": "integer", "y": "integer"}, ["observation", "x", "y"]),
+        "drag": ("Drag a slider/unlock handle to the right or onto a target", {"ref": "string", "to_ref": "string", "dx": "integer", "dy": "integer", "observation": "string", "x": "integer", "y": "integer", "to_x": "integer", "to_y": "integer"}, []),
         "dialog": ("Respond to the current browser dialog", {"accept": "boolean"}, ["accept"]),
         "inspect_controls": ("Inspect selected independent disclosures and return durable before/after citation candidates", {"refs": "array:string"}, ["refs"]),
         "read_links": ("Read up to six explicitly selected record links from the current result set", {"refs": "array:string"}, ["refs"]),

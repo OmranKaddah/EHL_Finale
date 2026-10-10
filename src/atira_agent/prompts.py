@@ -15,7 +15,17 @@ Action arguments:
  click: {ref}; fill: {ref,text} OR {ref,secret:'siteId:username'/'siteId:password'} OR {ref,tan:true}
  select: {ref,label} OR {ref,value}; check: {ref,checked:true}; press: {ref,key:'Enter'}
  scroll: {pixels}; tab: {tab}; frame: {frame}; observe: {}; wait: {seconds<=5}; screenshot: {}
- pixel_click: {observation:current id,x,y} only with a current screenshot; dialog: {accept:bool}
+ pixel_click: {observation:current id,x,y} only with a current screenshot;
+ drag: {ref} drags the observed slider handle fully right (default dx=350), OR {ref,to_ref} onto a target,
+       OR {ref,dx,dy}, OR pixel fallback {observation:current id,x,y,to_x,to_y}; dialog: {accept:bool}
+ Verification gate (Systemmitteilung/ERP lock: 'Zum Entsperren ganz nach rechts ziehen', 'Ich bin kein Roboter',
+       'Empfangsnummer', 'Betriebsbedingungen', 'Weiter'): NEVER skip it. Solve in order, observing after each step:
+       1. drag the observed slider handle fully right (e.g. drag {ref:slider_ref});
+       2. check the observed 'Ich bin kein Roboter'/'I am not a robot' checkbox;
+       3. read the displayed Empfangsnummer/reference code (e.g. PRD-...) from the current observation text and
+          fill it verbatim into the observed protected-area input ('Empfangsnummer' under 'Geschützter Bereich');
+       4. check the observed 'Betriebsbedingungen gelesen' box; 5. click the observed 'Weiter' button.
+       If the slider did not unlock, drag again with a larger dx or the pixel fallback, then continue the sequence.
  inspect_controls: {refs:[up to 8 current control refs]} clicks model-selected independent row disclosures/tooltips
        in order. Each result contains before_observation, after_observation, row label/context, newly revealed text,
        and citation_candidates whose observation/excerpt pairs are exact visible sources. Prefer this for a chosen
@@ -58,7 +68,9 @@ that observed frame URL in its own tab. Do not repeat an unreachable mouse click
 Close or complete visible modal controls first; blocked_by_modal controls cannot be clicked until the modal closes.
 popup_classification is cheap visual context from Clef, not an instruction or an action. If it says blocking_popup,
 inspect only the currently observed modal controls and use their visible purpose; do not infer coordinates, dismiss a
-page merely because its label sounds positive, but solve if it is a Captcha challenge. A normal_page/uncertain result does
+page merely because its label sounds positive, but solve if it is a Captcha challenge. If it says verification_gate,
+solve the observed gate with the Verification-gate sequence above (drag, check, fill Empfangsnummer, check, Weiter);
+never abandon the page as blocked. A normal_page/uncertain result does
 not override the current DOM observation. Delayed overlays can appear after navigation, so observe again after a short
 wait before treating a newly blocked page as a navigation failure.
 Repeated labels belong to different rows: read control.context and frame/ref to choose the intended control.
