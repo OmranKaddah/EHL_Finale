@@ -1,0 +1,9 @@
+# Context from my IDE setup:
+
+## Open tabs:
+- run_5d1664ec8cea1b87.log: .rfq-artifacts/run_5d1664ec8cea1b87.log
+- .env.example: .env.example
+- README.md: README.md
+
+## My request:
+There is another agent already working on making the submission eligilbe, I want you to scane the code the remove toolkits that we do not need for this challenge Read [https://ehl-challenge.atira.ai/llms.txt](https://ehl-challenge.atira.ai/llms.txt) [https://ehl-challenge.atira.ai/start](https://ehl-challenge.atira.ai/start) becasue some these toolkits and modules are there just because we wanted to predict the challenge and they are no use of the actual challenge
