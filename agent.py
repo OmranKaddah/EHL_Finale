@@ -459,6 +459,8 @@ def missing_facts(facts: dict) -> list:
                 "set no_bid_material_missing to false)"]
     for p in pos:
         pid = p.get("position")
+        if not str(p.get("material") or "").strip():
+            miss.append(f"{pid}.material (the matching ACTIVE ERP material and all its facts)")
         if str(p.get("currency", "EUR")).upper() != "EUR" and float(p.get("eur_per_currency_unit") or 0) in (0.0, 1.0):
             miss.append(f"{pid}.eur_per_currency_unit (EUR per 1 {p.get('currency')}, from the governing FX fixing mail)")
         if p.get("pool_member") and not float(pricing.D(p.get("allocation_mass"))):
@@ -501,11 +503,59 @@ async def fill_missing_facts(task, facts, evidence, deadline):
     return facts
 
 
+def _vote(values):
+    """The value most extractions agree on; an empty value (None, "", []) is an abstention, not a vote."""
+    def canon(v):
+        if isinstance(v, list):  # e.g. validity windows: the order and the time of day do not matter
+            return json.dumps(sorted(json.dumps(x, sort_keys=True, ensure_ascii=False)[:400] for x in v))
+        if isinstance(v, (int, float)) and not isinstance(v, bool):
+            return repr(float(v))
+        return json.dumps(v, sort_keys=True, ensure_ascii=False)
+    votes = [v for v in values if v not in (None, "", [], {})]
+    if not votes:
+        return values[0] if values else None
+    keys = [canon(v) for v in votes]
+    return votes[keys.index(max(keys, key=keys.count))]  # ties: the earliest extraction
+
+
+def merge_facts(cands: list) -> dict:
+    """Several independent extractions of the same evidence, merged field by field: one extraction dropping or
+    misreading a field no longer decides the bid."""
+    cands = [c for c in cands if isinstance(c, dict) and c.get("positions")]
+    if len(cands) < 2:
+        return cands[0] if cands else {}
+    out = {k: _vote([c.get(k) for c in cands]) for k in dict.fromkeys(k for c in cands for k in c) if k != "positions"}
+    by_id = [{str(p.get("position", "")).strip(): p for p in c["positions"] if isinstance(p, dict)} for c in cands]
+    ids = [i for i in dict.fromkeys(i for m in by_id for i in m) if i and sum(i in m for m in by_id) * 2 > len(by_id)]
+    out["positions"] = []
+    for i in ids:
+        rows = [m[i] for m in by_id if i in m]
+        row = {}
+        for k in dict.fromkeys(k for r in rows for k in r):
+            vals = [r.get(k) for r in rows]
+            if k == "setup_fee_eur":  # a fee left out reads as 0: only an extraction that found one votes
+                vals = [v if float(pricing.D(v)) else None for v in vals] + [0]
+            row[k] = _vote(vals)
+        out["positions"].append(row)
+    return out
+
+
 async def extract_and_compute(task, evidence: str, deadline):
-    """Model extracts the facts, pricing.py calculates."""
-    text = await within(ask(FACTS_PROMPT + "\n" + brief_block(task) + "\n# EVIDENCE\n" + evidence[:200000],
-                            strong=True, max_tokens=12000, effort="low"), max(10, deadline - time.time()))
-    facts = parse_json(text)
+    """Model extracts the facts (three independent readings, merged field by field), pricing.py calculates."""
+    prompt = FACTS_PROMPT + "\n" + brief_block(task) + "\n# EVIDENCE\n" + evidence[:200000]
+    budget = max(10, deadline - time.time())
+    texts = await asyncio.gather(*(within(ask(prompt, strong=True, max_tokens=12000, effort="low"), budget)
+                                   for _ in range(3)), return_exceptions=True)
+    readings = []
+    for t in texts:
+        try:
+            readings.append(parse_json(t))
+        except Exception as e:
+            log(f"facts: one reading unusable ({type(e).__name__})")
+    facts = merge_facts(readings)
+    log(f"facts: merged {len(readings)} readings")
+    if not facts:
+        raise ValueError("no usable facts reading")
     # only the tender's own position numbers count; requirement ids or invented rows mean the extraction failed
     # material-level values come straight from the ERP investigators' structured blocks (no cross-material mix-ups)
     mats = material_facts_from(evidence)

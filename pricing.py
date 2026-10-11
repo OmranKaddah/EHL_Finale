@@ -112,11 +112,12 @@ def pick_scale(p: dict, qty: int):
 def pick_metal_rate(p: dict, scenario_date: str):
     """Rule 28: the rate whose inclusive validity window contains the scenario date."""
     rates = p.get("metal_rates") or []
+    hit = None  # if windows overlap, the one that starts latest (the most specific one) governs, not the list order
     for r in rates:
         lo, hi = str(r.get("valid_from") or "0000"), str(r.get("valid_to") or "9999")
-        if lo[:10] <= scenario_date[:10] <= hi[:10]:
-            return D(r.get("rate_eur_per_kg"))
-    return D(p.get("metal_rate_eur_per_kg"))
+        if lo[:10] <= scenario_date[:10] <= hi[:10] and (hit is None or lo[:10] > hit[0]):
+            hit = (lo[:10], r)
+    return D(hit[1].get("rate_eur_per_kg")) if hit else D(p.get("metal_rate_eur_per_kg"))
 
 
 ALIASES = {  # field names a model sometimes uses instead of the schema's
