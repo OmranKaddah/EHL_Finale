@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>bz5b4z96q</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-Moritz-workspace-EHL-Finale/9c3ef7c5-c17a-44c8-bdcc-c25f3bce0604/tasks/bz5b4z96q.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for research phase and ERP gate" completed (exit code 0)</summary>
+</task-notification>
