@@ -3,7 +3,7 @@
   "checkpoint_id": "01M4M7TNNYB3YZTGD3EEEJMBX5",
   "strategy": "manual-commit",
   "branch": "adira-v2",
-  "checkpoints_count": 1,
+  "checkpoints_count": 6,
   "files_touched": [
     ".env.example",
     ".gitignore",
@@ -91,10 +91,10 @@
     }
   ],
   "token_usage": {
-    "input_tokens": 1330,
-    "cache_creation_tokens": 663587,
-    "cache_read_tokens": 254710423,
-    "output_tokens": 393292,
-    "api_call_count": 640
+    "input_tokens": 54,
+    "cache_creation_tokens": 16039,
+    "cache_read_tokens": 18220101,
+    "output_tokens": 9421,
+    "api_call_count": 26
   }
 }
