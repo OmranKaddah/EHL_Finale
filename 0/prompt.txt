@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>bxbh013cd</task-id>
+<tool-use-id>toolu_01TLpmPD98i6zX6D7TQ6Y3iM</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-Moritz-workspace-EHL-Finale/9c3ef7c5-c17a-44c8-bdcc-c25f3bce0604/tasks/bxbh013cd.output</output-file>
+<status>completed</status>
+<summary>Background command "Start parallel local run" completed (exit code 0)</summary>
+</task-notification>
