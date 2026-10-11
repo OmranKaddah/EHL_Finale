@@ -406,9 +406,9 @@ rules (which revision, which Q&A change, which mail governs, which price conditi
 window, which material matches). Do NOT calculate prices: report the raw inputs. Output ONLY JSON in this shape
 (comments explain the fields; omit nothing; use 0 / false / null when the evidence shows none):
 """ + pricing.FACTS_SCHEMA + """
-PRICES: copy each scale price into "price_text" EXACTLY as displayed (e.g. "181.429" or "2,044.34") and set
-"number_format" to the format stated on that condition - the code converts. NUMBERS elsewhere: each price condition states its number format. de-DE: "181.429" means 181429 and "1.234,56" means
-1234.56 (dot = thousands, comma = decimals). en-US: "2,044.34" means 2044.34 (comma = thousands, dot = decimals).
+PRICES: copy each scale price into "price_text" EXACTLY as displayed (e.g. "100.000" or "1,234.56") and set
+"number_format" to the format stated on that condition - the code converts. NUMBERS elsewhere: each price condition states its number format. de-DE: "100.000" means 100000 and "1.234,56" means
+1234.56 (dot = thousands, comma = decimals). en-US: "1,234.56" means 1234.56 (comma = thousands, dot = decimals).
 Without a stated format, German websites use de-DE. Convert every number to a plain JSON number accordingly, and
 take each material's OWN condition (never copy another material's price).
 Fill every field from the evidence: the FX rate from the governing currency fixing mail when the currency is not EUR,

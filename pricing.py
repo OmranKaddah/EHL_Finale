@@ -24,7 +24,7 @@ FACTS_SCHEMA = """{
    "quantity_pieces": 0,                // final quantity in PIECES (latest non-withdrawn Q&A change, Satz converted)
    "material": "material number or null",
    "number_format": "de-DE",            // the number format stated on the price condition (de-DE or en-US)
-   "scales": [{"min_qty": 1, "price_text": "181.429"}],  // ALL scales of the condition valid on the scenario date; price_text EXACTLY as displayed (do not convert)
+   "scales": [{"min_qty": 1, "price_text": "100.000"}],  // ALL scales of the condition valid on the scenario date; price_text EXACTLY as displayed (do not convert)
    "scale_price": 0,                    // (optional) the scale price you would choose; the code re-selects from "scales"
    "price_unit_pieces": 1,              // the condition's price unit (e.g. 1, 10, 100 pieces)
    "currency": "EUR",
