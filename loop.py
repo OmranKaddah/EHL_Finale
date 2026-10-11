@@ -37,6 +37,9 @@ BROWSER_TOOLS = [
     ("read_url", "Download a URL (a path on the current site, a document, a message, a ZIP, a result page, an iframe "
                  "src) with this tab's login and return its full text, including collapsed sections. Does not "
                  "navigate. Best way to read documents, messages, iframes and further result pages.", {"url": "string"}),
+    ("read_urls", "Download SEVERAL URLs at once (same rules as read_url) and return all their texts: urls = JSON "
+                  "list of URLs or paths you have seen. One step instead of many: use it whenever you know two or "
+                  "more pages, tabs, messages or documents you need to read.", {"urls": "string"}),
     ("read_page", "Full text of the current page and its frames, including hidden/collapsed sections.", {}),
     ("find", "Search the current page text for a string and show the surroundings.", {"text": "string"}),
 ]
@@ -159,11 +162,32 @@ class Agent:
         elif name == "back":
             await tab.back()
         elif name == "read_url":
-            text = (await tab.fetch_text(args["url"]))[:25000]
             if args["url"] in self.docs:
                 return f"(You already read {args['url']}; its text is above. Do not re-read; continue.)"
+            text = (await tab.fetch_text(args["url"]))[:25000]
             self.docs[args["url"]] = text
             return text
+        elif name == "read_urls":
+            urls = args["urls"]
+            urls = json.loads(urls) if isinstance(urls, str) else urls
+            urls = list(dict.fromkeys(str(u) for u in urls))[:12]
+            fresh = [u for u in urls if u not in self.docs]
+            texts = []  # one after the other: parallel downloads in one tab made the websites hang
+            for u in fresh:
+                try:
+                    texts.append(await within(tab.fetch_text(u), 12))
+                except Exception as e:
+                    texts.append(e)
+            out = [f"(You already read {u}; its text is above.)" for u in urls if u in self.docs]
+            share = max(6000, 60000 // max(1, len(fresh)))
+            for u, t in zip(fresh, texts):
+                if isinstance(t, Exception):
+                    out.append(f"===== {u}\nERROR: {t}")
+                    continue
+                self.docs[u] = t[:25000]
+                out.append(f"===== {u}\n{t[:share]}" + ("\n...(cut; read_url this one alone for the rest)"
+                                                         if len(t) > share else ""))
+            return "\n\n".join(out)
         elif name == "read_page":
             return (await tab.read_page())[:30000]
         elif name == "find":

@@ -65,8 +65,9 @@ How these websites behave (they are designed to trip you up):
   every required field (values shown on the page, e.g. a receipt/reference number), look for error messages.
 - Do not invent URLs: open only addresses you have seen on a page (link targets, iframe src, form results) or
   ones built by changing a parameter you have seen (e.g. page=2). Guessed paths end in "404 Not Found".
-- Be fast: time and model calls cost. You may issue several tool calls in one turn when they don't depend on each
-  other (e.g. read_url of several pages). Don't re-read what you already have.
+- Be fast: time and model calls cost. Whenever you know two or more addresses you need (the tabs of a record,
+  further result pages, several messages or documents), read them all in ONE step with read_urls instead of one
+  read_url per step. Don't re-read what you already have.
 """
 
 
@@ -354,7 +355,12 @@ async def erp_phase(task, ctx, first_page, plan, deadline, login_task):
                '"price_unit_pieces": n, "number_format": "de-DE or en-US as stated", "scales": [{"min_qty": n, '
                '"price_text": "exactly as displayed"}], "valid_from": "...", "valid_to": "...", "free_stock": n, '
                '"lead_stock_weeks": n, "lead_production_weeks": n, "carton_size": n, "allocation_mass": n, '
-               '"surcharge_mass_kg": n, "index_key": "..."}. Take every value from THAT material page.')
+               '"surcharge_mass_kg": n, "index_key": "..."}. Take every value from THAT material page.\n'
+               "Work fast: once the group's result list is complete (all its result pages seen), read all tabs, "
+               "stock views and price-condition pages of the matching materials with read_urls, several per step. "
+               "As soon as every field above is covered for every matching material, finish at once: no further "
+               "keyword searches to double-check, no re-opening of pages you already read. Keep searching only "
+               "for a field that is still missing.")
         page = await ctx.new_page()  # a fresh tab each: the login tab may still hold the cancelled login agent's state
         etab = webtools.Browser(page, f"erp{i}")
         etab.home_host = urlparse(next(s["url"] for s in task["access"] if s["siteId"] == "erp")).netloc
@@ -592,6 +598,10 @@ async def submit(task, tabs, answer, deadline, plan=None):
            "submission. Use the TAN at once (valid 5 minutes, a new request invalidates the old). After the final "
            "click, look at the page: only a receipt/confirmation (e.g. Eingangsbestätigung) means it is done; if the "
            "signing step is still shown, read the error message and fix it (new TAN if expired) and confirm again. "
+           "Before filling a position, look at the step: close any popup that covers the form, and if some of its "
+           "fields sit in a collapsed section, expand that section first, so that ONE fill_form call reaches all "
+           "of them. A dependent dropdown may only show its options after the previous choice was applied: then "
+           "send the remaining fields in a second call, without repeating the ones already set. "
            "Be fast: you MUST fill each wizard step with ONE fill_form call (all its dropdowns, text fields "
            "and checkboxes, in order, by their field names; pass apply_button for dependent dropdowns), then click "
            "the step's next button. Do not fill fields one by one. Then finish.")
@@ -697,6 +707,7 @@ async def solve(task, pw):
         plan = {"requirements": [{"kataloggruppe": g, "raw": "see the specification report for its attributes"}
                                  for g in groups] or [{"kataloggruppe": "see spec", "raw": spec[:3000]}]}
     log(f"plan: {json.dumps(plan, ensure_ascii=False)[:1500]}")
+    marks = {"plan": round(time.time() - T0)}
     erp_reports = await hard(erp_phase(task, erp_ctx, erp_page, plan, end - 13 * 60, erp_login_task), end - 12.5 * 60,
                              ["(ERP report missing)"])
     if dev.get("phase") == "erp":
@@ -704,7 +715,9 @@ async def solve(task, pw):
         for r in erp_reports:
             log("ERP REPORT: " + r[:3000])
         return None
+    marks["erp"] = round(time.time() - T0)
     mail = await hard(t1["mail"], end - 12.5 * 60, "(mail report missing)")
+    marks["mail"] = round(time.time() - T0)
 
     evidence = ("# TENDER PORTAL REPORT\n" + tender + "\n\n# SPECIFICATION REPORT\n" + spec + "\n\n# WEBMAIL REPORT\n"
                 + mail + "\n\n# ERP REPORTS\n" + "\n\n".join(erp_reports) + "\n\n# PLANNER (preliminary)\n" +
@@ -758,6 +771,8 @@ async def solve(task, pw):
     log(f"answer: {json.dumps(answer, ensure_ascii=False)} issues: {issues}")
     answer.pop("notes", None) if len(str(answer.get("notes", ""))) > 3900 else None
 
+    marks["answer"] = round(time.time() - T0)
+    log(f"TIMELINE (seconds when each phase was done): {marks}")
     # phase 4
     report = await submit(task, tabs, answer, end - 15, plan)
     log(f"submission report: {report}")
