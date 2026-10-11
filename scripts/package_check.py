@@ -32,8 +32,11 @@ def check(root, output):
     for key in ("setup", "run"):
         if not isinstance(manifest.get(key), list) or not all(isinstance(x, str) for x in manifest[key]):
             raise ValueError(f"agent.json {key} must be an argv array")
-    if manifest.get("browsers") not in range(1, 5) or manifest.get("models") != ["qwen"]:
-        raise ValueError("Expected 1..4 browsers and Qwen-only warmup")
+    models = manifest.get("models")
+    if (manifest.get("browsers") not in range(1, 5) or not isinstance(models, list)
+            or not models or models[0] != "qwen" or len(models) != len(set(models))
+            or set(models) - {"qwen", "openai"}):
+        raise ValueError("Expected 1..4 browsers and a Qwen-first manifest with optional OpenAI")
     files = package_files(root)
     patterns = [r"sk-(?:proj-)?[A-Za-z0-9_-]{24,}", r"atp_[A-Za-z0-9_-]{24,}"]
     for path in files:

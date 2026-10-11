@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import time
 from datetime import datetime, timezone
@@ -40,6 +41,7 @@ class Submission:
         self.receipt = None
         self.signing_attempted_at = None
         self.signing_started_at = None
+        self.reviewed_at = None
 
     def transition(self, state):
         self.state = state
@@ -99,6 +101,59 @@ class Submission:
         self.telemetry.emit("tan_requested")
         return {"requested": True, "instruction": "Read the newest matching signing mail; prior TANs are invalid."}
 
+    @staticmethod
+    def _visible_number(value) -> tuple[str, ...]:
+        """Return ordinary portal spellings for a computed decimal."""
+        raw = format(Decimal(str(value)), "f")
+        whole, dot, fraction = raw.partition(".")
+        comma = whole + ("," + fraction if dot else "")
+        grouped = f"{int(whole):,}".replace(",", ".") + ("," + fraction if dot else "")
+        return tuple(dict.fromkeys((raw, comma, grouped)))
+
+    def review_current_form(self, observation):
+        """Fail closed when a displayed submission draft differs from pricing.
+
+        This is intentionally schema- and DOM-agnostic: it only compares the
+        calculated values with visible page text and observed control values.
+        It catches stale row refs and dropdown selections that silently write a
+        different material than the one passed to ``fill_answer``.
+        """
+        if self.state not in {SubmissionState.VALIDATED, SubmissionState.TAN_REQUESTED} or not self.result:
+            raise ValueError("Prepare a validated answer before reviewing the portal form")
+        visible = " ".join((observation.text, json.dumps(observation.controls, ensure_ascii=False, default=str))).casefold()
+        missing = []
+        labels = {
+            "position": ("position", "pos."), "material_number": ("material", "artikel"),
+            "quantity": ("quantity", "menge"), "lead_time_weeks": ("lead time", "lieferzeit"),
+            "base_unit_price": ("base", "basispreis"), "surcharge_per_unit": ("surcharge", "zuschlag"),
+            "packaging_per_unit": ("packaging", "verpack"), "unit_price": ("unit", "stückpreis"),
+        }
+        for line in self.result.answer["positions"]:
+            for key in ("position", "material_number", "quantity", "lead_time_weeks",
+                        "base_unit_price", "surcharge_per_unit", "packaging_per_unit", "unit_price"):
+                # Do not reject a compact portal form that does not render a
+                # particular component.  If the form does render that field,
+                # however, its calculated value must be visible.
+                if not any(label in visible for label in labels[key]):
+                    continue
+                value = line[key]
+                candidates = self._visible_number(value) if isinstance(value, Decimal) else (str(value),)
+                if not any(candidate.casefold() in visible for candidate in candidates):
+                    missing.append(f"{line['position']}.{key}")
+        if any(label in visible for label in ("net total", "total net", "gesamt", "total")):
+            for candidate in self._visible_number(self.result.answer["total_net"]):
+                if candidate.casefold() in visible:
+                    break
+            else:
+                missing.append("total_net")
+        if missing:
+            self.reviewed_at = None
+            raise ValueError("Portal review is incomplete or mismatched: " + ", ".join(missing))
+        self.reviewed_at = observation.observed_at
+        self.telemetry.emit("submission_reviewed", observation=observation.id,
+                            positions=[line["position"] for line in self.result.answer["positions"]])
+        return {"reviewed": True, "positions": len(self.result.answer["positions"])}
+
     async def sign(self, args):
         if self.state != SubmissionState.TAN_REQUESTED or not self.browser.latest_tan:
             raise ValueError("Signing requires a fresh requested and captured TAN")
@@ -106,6 +161,8 @@ class Submission:
             raise ValueError("TAN may be expired; request a fresh TAN")
         if not args.get("reviewed") or not args.get("omissions_confirmed"):
             raise ValueError("Review the portal values and explicit omissions before final signing")
+        if self.reviewed_at is None:
+            raise ValueError("Call review_submission on the current portal form before final signing")
         self.signing_attempted_at = time.monotonic()
         self.signing_started_at = datetime.now(timezone.utc)
         self.transition(SubmissionState.SIGNING_ATTEMPTED)

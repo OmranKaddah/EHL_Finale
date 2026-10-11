@@ -95,6 +95,10 @@ class MultiAgentCoordinator:
         self.submission = None
         self.pricing = None
         self.sequential_fallback = False
+        # Four agents sharing one hosted proxy can build a long request queue.
+        # Two concurrent decisions retain parallel browser work while keeping
+        # model latency inside the protected signing budget.
+        self.model_limiter = asyncio.Semaphore(2)
 
     @property
     def telemetries(self):
@@ -120,7 +124,7 @@ class MultiAgentCoordinator:
             browser = BrowserSession(self.config, self.run, telemetry, headful=True, browser_index=index,
                                      agent_id=role, assigned_site=site_id, allow_submission=role == "tender")
             await browser.start()
-            model = QwenClient(self.config, telemetry)
+            model = QwenClient(self.config.for_role(role), telemetry, limiter=self.model_limiter)
             classifier = PopupClassifier(self.config, telemetry)
             controller = Orchestrator(self.run, self.config, browser, model, telemetry, self.deadline, self.token,
                                       ledger=self.ledger, agent_name=role, role_instruction=ROLE_INSTRUCTIONS[role],
@@ -234,13 +238,26 @@ class MultiAgentCoordinator:
                 "erp": ("material", "price", "stock", "search"),
                 "mail": ("mail", "discount", "fx", "pool", "bonus", "packaging", "commitment"),
             }.items() if any(word in unresolved for word in words)]
-            for role in roles[:2]:
-                item = self.specialists[role]
-                item.controller.role_instruction = ROLE_INSTRUCTIONS[role] + " The coordinator still has unresolved evidence; make one focused recovery pass using the shared ledger."
-                await item.controller.run_loop(max_steps=20)
+            if roles:
+                for role in roles:
+                    self.specialists[role].controller.role_instruction = (
+                        ROLE_INSTRUCTIONS[role] + " The coordinator still has unresolved evidence; make one focused "
+                        "recovery pass for the missing positions using the shared ledger."
+                    )
+                # Recover all relevant dependencies concurrently; a serial
+                # two-role cap previously left later tender lines unpriced.
+                await self.investigate_roles(steps=12, roles=tuple(roles), stop_at_submission_reserve=True)
             self.pricing = calculate(self.ledger, allow_partial=self.deadline.submission_due)
         self.root_telemetry.emit("pricing_computed", result=self.pricing.model_dump(mode="json"), remaining=self.deadline.remaining)
         tender = self.specialists["tender"]
+        if self.config.provider == "hybrid":
+            # Tender owns the final form; use the explicitly configured
+            # submission model without creating a browser or bypassing Atira.
+            model_config = self.config.for_role("submission")
+            if tender.model.config != model_config:
+                await tender.model.close()
+                tender.model = QwenClient(model_config, tender.telemetry, limiter=self.model_limiter)
+                tender.controller.model = tender.model
         tender.controller.research_only = False
         tender.controller.submission = self.submission
         tender.controller.pricing = self.pricing

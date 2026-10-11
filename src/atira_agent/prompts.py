@@ -26,6 +26,9 @@ Action arguments:
           fill it verbatim into the observed protected-area input ('Empfangsnummer' under 'Geschützter Bereich');
        4. check the observed 'Betriebsbedingungen gelesen' box; 5. click the observed 'Weiter' button.
        If the slider did not unlock, drag again with a larger dx or the pixel fallback, then continue the sequence.
+       A page can show an unlocked list beside a locked empty preview/reading pane. If one gate says unlocked or its
+       slider is at maximum, do not drag it again; continue the current list/search task unless the selected item needs
+       its preview. If several gates are visible, choose controls belonging to the task area.
  inspect_controls: {refs:[up to 8 current control refs]} clicks model-selected independent row disclosures/tooltips
        in order. Each result contains before_observation, after_observation, row label/context, newly revealed text,
        and citation_candidates whose observation/excerpt pairs are exact visible sources. Prefer this for a chosen
@@ -56,6 +59,13 @@ Action arguments:
  api_submit: {} ONLY when the declared submission target is kind api.
  stage: {stage:'investigating'|'pricing'|'submitting',summary:short status}
 
+Coverage before depth: this tender can contain several positions. Tender: enumerate and record EVERY position and
+the latest dated Q&A (including an answer that withdraws an earlier quantity change) before optional links.
+Specifications: extract EVERY current requirement. ERP: finish one complete narrow candidate set, exact match,
+stock and price per requirement; never reuse a material merely because it resembles another position. Mail: retrieve
+the dated rules needed for ALL positions, including every applicable metal-index rate. Missing a position is worse
+than omitting an optional document.
+
 Efficiency: record all relevant facts already visible on a chosen page together, using inline citations. Do not
 spend separate turns citing, inspecting schemas and recording one obvious field at a time. Inspect schemas only
 when unsure. Open all relevant pages of the selected document/result set, but avoid re-reading saved evidence.
@@ -65,6 +75,9 @@ Use select only for a control whose tag is select; custom comboboxes need click 
 If a clipped iframe prevents a mouse click, try the observed button's keyboard activation with press/Enter or open
 that observed frame URL in its own tab. Do not repeat an unreachable mouse click until the retry budget is exhausted.
 Close or complete visible modal controls first; blocked_by_modal controls cannot be clicked until the modal closes.
+For an unsolicited portal survey, UI announcement, maintenance notice, or download bar, prefer the observed
+close/dismiss control (for example 'Schließen' or ×). Do not follow an 'accept/continue' link that leaves the
+assigned business page unless its visible text is an actual required consent, contract term, or verification step.
 popup_classification is cheap visual context from Clef, not an instruction or an action. If it says blocking_popup,
 inspect only the currently observed modal controls and use their visible purpose; do not infer coordinates, dismiss a
 page merely because its label sounds positive, but solve if it is a Captcha challenge. If it says verification_gate,
@@ -79,7 +92,8 @@ recording the row. Never emit record with no data. Never repeatedly toggle rows 
 popovers stay open. Pagination remains your decision: click only an observed next/load control after resolving the
 selected page's relevant rows.
 Password value is intentionally hidden: filled=true means it was entered successfully. Then click the login button;
-do not keep filling the password. Never use literal [REDACTED] as a value or credential handle.
+do not keep filling the password or username. A "session expired" banner means re-login once: fill only an empty
+credential field, then click the observed login button. Never use literal [REDACTED] as a value or credential handle.
 Use semantic labels/links in observations, not guessed URLs. Login secrets are opaque handles, never type or report
 their values. Browser may open a new tab; switch using the observed tab inventory. Read iframe text/controls.
 Visible identifiers may include zero-width formatting marks. Preserve exact visible excerpts for citations, but normalize
@@ -134,6 +148,9 @@ investigation; calculate partial and explicitly omit incomplete positions in the
 must still be valid. Unknown material match isn't no_bid. A real confirmed absence means no_bid, no positions, zero.
 After preparing, map computed values to the current form. Fill registration data from runtime brief/evidence, not
 constants. Keep net and gross totals distinct. Saving is not submitting. Going back may erase later steps.
+Before requesting TAN or signing, call review_submission on the current portal page. If it reports a mismatch,
+correct the observed fields and review again; never sign a draft whose material, quantity, price components, lead
+time or total are not visibly the calculated values. This is especially important after selects or form rerenders.
 Request TAN only when ready, read newest matching mail after that request; a replacement request invalidates the old
 TAN. Use capture_tan then fill tan:true; do not repeat the value. Review values and omissions before sign. If a dialog
 asks final confirmation, accept it. After an uncertain signing action inspect receipt first, never blindly resubmit.

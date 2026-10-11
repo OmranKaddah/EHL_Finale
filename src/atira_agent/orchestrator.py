@@ -16,8 +16,10 @@ from .submit import Submission
 from .telemetry import safe_error
 
 MAX_EXPLICIT_NAVIGATIONS_PER_TARGET = 2
-MAX_MODEL_HISTORY_ITEMS = 8
-MAX_MODEL_HISTORY_RESULT_CHARS = 1600
+# Remote decisions dominate the wall clock.  A short, recent action trail is
+# enough to prevent repeats without repeatedly sending document-sized results.
+MAX_MODEL_HISTORY_ITEMS = 4
+MAX_MODEL_HISTORY_RESULT_CHARS = 700
 
 
 def action_signature(action, observation):
@@ -25,7 +27,12 @@ def action_signature(action, observation):
     args = dict(action.args)
     if "ref" in args:
         control = next((x for x in observation.controls if x["ref"] == args["ref"]), {})
-        args["ref"] = (re.sub(r"^(?:.*-)?o\d+-", "", args["ref"]), control.get("label"), control.get("context"))
+        # A password's value is hidden, but the filled bit is genuine progress.
+        # Include semantic state so a legitimate session-expiry re-login is not
+        # rejected merely because URL and visible text stayed the same.
+        args["ref"] = (re.sub(r"^(?:.*-)?o\d+-", "", args["ref"]), control.get("label"),
+                       control.get("context"), control.get("filled"), control.get("checked"),
+                       control.get("disabled"))
     state = (observation.url, hashlib.sha256(observation.text.encode()).hexdigest())
     return action.action, json.dumps(args, sort_keys=True, default=str), state
 
@@ -46,6 +53,14 @@ def navigation_allowed(history, destination: str | None) -> bool:
 
 def compact_model_result(value):
     """Keep decision context useful without replaying whole documents every turn."""
+    # Citing is deliberately a two-turn workflow: the next model decision
+    # needs the evidence ID even when the exact source excerpt was large.
+    # Preserve that small structured handle instead of replacing the entire
+    # list with an opaque truncated preview.
+    if isinstance(value, list) and value and all(isinstance(item, dict) and "id" in item for item in value):
+        return [{key: (str(item[key])[:240] if key == "excerpt" else item[key])
+                 for key in ("id", "kind", "evidence", "excerpt", "error") if key in item}
+                for item in value]
     rendered = json.dumps(value, ensure_ascii=False, default=str)
     if len(rendered) <= MAX_MODEL_HISTORY_RESULT_CHARS:
         return value
@@ -75,6 +90,27 @@ class Orchestrator:
         self.tan_callback = None
         self.popup_classifier = None
         self.popup_classification = None
+        # Searching a mailbox commonly reloads the page and recreates its
+        # client-side robot gate.  Remember completed exact searches so a
+        # model cannot burn the run re-unlocking and submitting the same query.
+        self.completed_searches: set[tuple[str, str, str]] = set()
+
+    def _search_key(self, control) -> tuple[str, str, str] | None:
+        """Return the visible search identity for a current submit control."""
+        if not self.observation or not control:
+            return None
+        label = str(control.get("label") or "").strip().casefold()
+        if label not in {"suchen", "search"}:
+            return None
+        field = next((item for item in self.observation.controls
+                      if item.get("type") == "search" and item.get("filled")), None)
+        if not field:
+            return None
+        query = str(field.get("value") or "").strip().casefold()
+        if not query:
+            return None
+        parsed = urlsplit(self.observation.url)
+        return (f"{parsed.scheme}://{parsed.netloc}{parsed.path}", str(field.get("label") or "").casefold(), query)
 
     def messages(self):
         # A specialist has no browser authority outside its assigned site.
@@ -201,7 +237,7 @@ class Orchestrator:
         if self.research_only and self._targets_submission(name, args):
             raise ValueError("Evidence-only mode cannot enter the declared submission path")
         if self.research_only and name in {"calculate", "prepare_submission", "fill_answer", "request_tan",
-                                           "capture_tan", "sign", "receipt", "api_submit"}:
+                                           "review_submission", "capture_tan", "sign", "receipt", "api_submit"}:
             raise ValueError("This specialist publishes evidence only; the central orchestrator owns pricing and signing")
         if name in {"click", "fill", "select", "check", "press", "drag"} and self.observation:
             control = next((item for item in self.observation.controls if item["ref"] == args.get("ref")), None)
@@ -210,6 +246,13 @@ class Orchestrator:
                                 if item.get("inside_modal")]
                 choices = ", ".join(modal_labels[:6]) or "an observed inside-modal control"
                 raise ValueError(f"Selected control is blocked by a modal; choose: {choices}")
+            if name == "fill" and args.get("secret") and control and control.get("filled"):
+                raise ValueError("Credential is already filled. Click the observed login/submit control instead of filling it again.")
+            search_key = self._search_key(control) if name == "click" else None
+            if search_key and search_key in self.completed_searches:
+                raise ValueError("This exact search was already submitted. Inspect its visible result, choose a different observed folder, or use a narrower distinct query instead of re-running the robot gate.")
+        else:
+            search_key = None
         if name == "read_links":
             results = []
             try:
@@ -301,6 +344,8 @@ class Orchestrator:
             return self.observation.model_dump(mode="json")
         if name == "fill_answer":
             result = await self.submission.fill(args["fields"])
+        elif name == "review_submission":
+            result = self.submission.review_current_form(self.observation)
         elif name == "request_tan":
             result = await self.submission.request_tan(args)
             if self.tan_callback:
@@ -319,6 +364,8 @@ class Orchestrator:
                 self.submission.browser.tan_captured_at = self.browser.tan_captured_at
         else:
             result = await self.browser.act(name, args)
+        if search_key:
+            self.completed_searches.add(search_key)
         self.observation = await self.browser.observe(include_image=name == "screenshot")
         self.ledger.observe(self.observation)
         self.popup_classification = await self._classify_popup(self.observation)

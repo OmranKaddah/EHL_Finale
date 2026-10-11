@@ -69,9 +69,13 @@ specialist. Local mode requires `CHALLENGE_SCOUTING` and launches four visible C
 +tender values are never compiled into application code. Each browser's request filter permits only its assigned runtime
 +origin (the tender browser also accesses the declared submission origin).
 
-Qwen uses `QWEN_BASE_URL` and `QWEN_API_KEY` from Atira. No personal OpenAI key is needed. Optional OpenAI-compatible
-paid-provider configuration requires both `ATIRA_MODEL_PROVIDER=openai` and `ATIRA_ALLOW_PAID=1`, an explicit model,
-and an Atira proxy endpoint. Do not enable it without approval. Merely having a key does not activate paid inference.
+Qwen uses `QWEN_BASE_URL` and `QWEN_API_KEY` from Atira. Optional OpenAI-compatible paid-provider configuration
+requires `ATIRA_MODEL_PROVIDER=openai` (or `hybrid`), `ATIRA_ALLOW_PAID=1`, an explicit `ATIRA_OPENAI_MODEL`, and an
+Atira proxy endpoint. Hybrid keeps Qwen for ERP/mail and uses OpenAI for tender, specifications and submission by
+default; override that split with `ATIRA_MODEL_ROLE_ROUTING`. Do not enable it without approval. Merely having a key
+does not activate paid inference, and raw provider endpoints are rejected. The current RFQ manifest is Qwen-only:
+Atira rejects OpenAI in `agent.json` for this challenge, so hybrid mode is available only where the host explicitly
+permits that provider.
 
 When Atira supplies `CLEF_BASE_URL` and `CLEF_API_KEY`, Clef classifies only sanitized screenshots that look like a
 blocking popup.

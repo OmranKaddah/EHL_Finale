@@ -21,3 +21,11 @@ def test_archive_is_reproducible_and_excludes_local_state(tmp_path):
     with tarfile.open(first["archive"]) as archive:
         assert set(archive.getnames()) == {"agent.json", "agent.py"}
         assert all(member.isfile() and member.mtime == 0 for member in archive.getmembers())
+
+
+def test_package_manifest_accepts_optional_openai_but_requires_qwen_first(tmp_path):
+    package = runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts/package_check.py"))
+    (tmp_path / "agent.json").write_text(json.dumps({"setup": ["uv"], "run": ["python"],
+                                                       "models": ["qwen", "openai"], "browsers": 4}))
+    (tmp_path / "agent.py").write_text("pass\n")
+    assert package["check"](tmp_path, tmp_path / "agent.tar.gz")["compressed_bytes"] > 0

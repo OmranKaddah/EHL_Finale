@@ -43,6 +43,28 @@ def test_paid_key_alone_does_not_activate():
     assert Config.from_env(env() | {"OPENAI_API_KEY": "fake", "OPENAI_BASE_URL": "https://api.openai.com/v1"}).provider == "qwen"
 
 
+def test_hybrid_provider_routes_only_to_configured_atira_proxy_models():
+    hybrid = env() | {
+        "ATIRA_MODEL_PROVIDER": "hybrid", "ATIRA_ALLOW_PAID": "1",
+        "OPENAI_BASE_URL": "http://127.0.0.1:8765/openai/v1", "OPENAI_API_KEY": "openai-local",
+        "ATIRA_OPENAI_MODEL": "approved-openai-model",
+    }
+    config = Config.from_env(hybrid)
+    assert config.for_role("erp").provider == "qwen"
+    assert config.for_role("tender").provider == "openai"
+    assert config.for_role("submission").model == "approved-openai-model"
+
+
+def test_hybrid_rejects_an_unproxied_openai_endpoint():
+    hybrid = env() | {
+        "ATIRA_MODEL_PROVIDER": "hybrid", "ATIRA_ALLOW_PAID": "1",
+        "OPENAI_BASE_URL": "https://api.openai.com/v1", "OPENAI_API_KEY": "key",
+        "ATIRA_OPENAI_MODEL": "approved-openai-model",
+    }
+    with pytest.raises(ValueError, match="localhost"):
+        Config.from_env(hybrid)
+
+
 async def test_run_loader_uses_header_agent_and_retries():
     requests = []
     def handler(request):

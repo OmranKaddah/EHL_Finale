@@ -12,7 +12,7 @@ from .tool_specs import model_tools
 
 SPECIALIST_DISPATCH_TIMEOUT_SECONDS = 12
 RESEARCH_EXCLUDED_TOOLS = frozenset({
-    "calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan", "sign", "receipt", "api_submit",
+    "calculate", "prepare_submission", "fill_answer", "review_submission", "request_tan", "capture_tan", "sign", "receipt", "api_submit",
 })
 
 
@@ -111,11 +111,12 @@ def parse_tool_call(name: str, payload: str) -> AgentAction:
 
 
 class QwenClient:
-    def __init__(self, config, telemetry):
+    def __init__(self, config, telemetry, *, limiter=None):
         self.config, self.telemetry = config, telemetry
         self.client = AsyncOpenAI(base_url=config.model_url, api_key=config.model_key, max_retries=0, timeout=120)
         self.input_tokens = self.output_tokens = 0
         self.excluded_tools = frozenset()
+        self.limiter = limiter
 
     async def decide(self, messages, deadline):
         for attempt in range(3):
@@ -124,7 +125,7 @@ class QwenClient:
                 timeout = deadline.timeout(120, investigation=not deadline.submission_due)
                 self.telemetry.emit("model_started", model=self.config.model, attempt=attempt + 1, remaining=deadline.remaining)
                 async with asyncio.timeout(timeout):
-                    reply = await self.client.chat.completions.create(
+                    request = self.client.chat.completions.create(
                         model=self.config.model, messages=messages, tools=model_tools(exclude=self.excluded_tools),
                         tool_choice="required",
                         # Each turn must return one small, validated tool call.
@@ -132,6 +133,11 @@ class QwenClient:
                         # latency while specialists are traversing paginated UI.
                         parallel_tool_calls=False, temperature=0.1, max_tokens=1200,
                     )
+                    if self.limiter:
+                        async with self.limiter:
+                            reply = await request
+                    else:
+                        reply = await request
                 usage = reply.usage
                 if usage:
                     self.input_tokens += usage.prompt_tokens
@@ -140,14 +146,19 @@ class QwenClient:
                                     input_tokens=self.input_tokens, output_tokens=self.output_tokens,
                                     call_usage=usage.model_dump() if usage else None)
                 message = reply.choices[0].message
-                if message.tool_calls:
-                    if len(message.tool_calls) != 1:
-                        raise ValueError("Return exactly one tool call")
-                    payload = message.tool_calls[0].function.arguments
-                    return parse_tool_call(message.tool_calls[0].function.name, payload)
-                else:
+                try:
+                    if message.tool_calls:
+                        if len(message.tool_calls) != 1:
+                            raise ValueError("Return exactly one tool call")
+                        payload = message.tool_calls[0].function.arguments
+                        return parse_tool_call(message.tool_calls[0].function.name, payload)
                     payload = (message.content or "").strip().removeprefix("```json").removesuffix("```").strip()
-                return parse_action(payload)
+                    return parse_action(payload)
+                except (json.JSONDecodeError, ValueError) as exc:
+                    self.telemetry.emit("model_invalid_action", error=type(exc).__name__, attempt=attempt + 1)
+                    if attempt == 2 or deadline.remaining < 10:
+                        raise
+                    await asyncio.sleep(min(1 + random.random(), max(0, deadline.remaining - 1)))
             except (APIConnectionError, APITimeoutError, APIStatusError, TimeoutError) as exc:
                 status = getattr(exc, "status_code", None)
                 self.telemetry.emit("model_error", error=type(exc).__name__, status=status, attempt=attempt + 1)

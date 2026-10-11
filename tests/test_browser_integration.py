@@ -154,7 +154,12 @@ class ObservingModel:
             return act("receipt", observation=obs["id"], receipt_id="SYN-RECEIPT-001",
                        excerpt="Offer successfully received. Receipt SYN-RECEIPT-001")
         if self.pending:
-            cite_result = state["recent_actions_and_results"][-1]["result"]
+            cite_result = next((item["result"] for item in reversed(state["recent_actions_and_results"])
+                                if isinstance(item.get("result"), list)), None)
+            if cite_result is None:
+                # A recoverable UI error must not make the synthetic model
+                # assume the pending citation disappeared.
+                return act("observe")
             evidence = cite_result[0]["id"]
             records = self.pending
             self.pending = None
@@ -185,7 +190,9 @@ class ObservingModel:
             if not next(x for x in controls if x["label"] == "Net total").get("value"):
                 return act("fill_answer", fields=[{"ref": ref("A unit"), "path": "positions.0.unit_price"},
                     {"ref": ref("B unit"), "path": "positions.1.unit_price"}, {"ref": ref("Net total"), "path": "total_net"}])
-            return act("request_tan", ref=ref("Request signing code"))
+            if state["recent_actions_and_results"][-1].get("result", {}).get("reviewed"):
+                return act("request_tan", ref=ref("Request signing code"))
+            return act("review_submission")
         if "signing message" in text:
             if not self.tan_captured:
                 self.tan_captured = True

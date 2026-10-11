@@ -52,7 +52,10 @@ async def run(args):
                 telemetry.emit("dashboard_unavailable", error=safe_error(exc, redactor))
         focus_roles = (args.focus,) if args.focus else None
         failed = await coordinator.investigate_roles(
-            steps=max(1, min(args.max_steps, 96)), roles=focus_roles,
+            # Four specialists share one hosted model proxy.  Cap discovery,
+            # but leave enough turns to cover a multi-line tender rather than
+            # producing a fast two-position partial bid.
+            steps=max(1, min(args.max_steps, 60)), roles=focus_roles,
             stop_at_submission_reserve=not args.research_only,
         )
         if args.research_only:

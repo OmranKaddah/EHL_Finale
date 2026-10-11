@@ -22,7 +22,11 @@ class PopupClassifier:
 
     @staticmethod
     def verification_gate(observation) -> bool:
-        """Recognize an observed verification challenge and interacting with it.
+        """Recognize an unresolved verification challenge, not stale page copy.
+
+        Mail clients can keep a locked empty preview alongside an already
+        unlocked list. Its static robot text must not redirect the model away
+        from a usable inbox or archive.
         """
         text = observation.text.casefold()
         terms = ("captcha", "i am not a robot", "i'm not a robot", "ich bin kein roboter",
@@ -30,7 +34,27 @@ class PopupClassifier:
                  "zum entsperren", "ganz nach rechts", "empfangsnummer",
                  "betriebsbedingungen", "systemmitteilung", "geschützter bereich",
                  "ich bin kein", "kein roboter")
-        return any(term in text for term in terms)
+        if not any(term in text for term in terms):
+            return False
+        sliders = [item for item in observation.controls if item.get("type") == "range"]
+        if sliders:
+            # An inbox/search list can be unlocked while the deliberately
+            # empty reading pane still renders its own dormant challenge.  A
+            # checked maxed-out slider proves the active list is usable;
+            # never redirect the agent back into the empty pane.
+            checkboxes = [item for item in observation.controls if item.get("type") == "checkbox"]
+            if any(str(item.get("value")) == "100" for item in sliders) and any(
+                    item.get("checked") is True for item in checkboxes):
+                return False
+            for slider in sliders:
+                try:
+                    if float(str(slider.get("value", "0"))) < 100:
+                        return True
+                except (TypeError, ValueError):
+                    return True
+            return False
+        # The page can announce the challenge before it renders controls.
+        return True
 
     @staticmethod
     def needed(observation) -> bool:

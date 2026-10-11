@@ -42,7 +42,7 @@ def test_named_tool_schemas_cover_the_executor_contract():
 
 
 def test_research_schema_hides_pricing_and_signing_tools():
-    excluded = {"calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan", "sign", "receipt", "api_submit"}
+    excluded = {"calculate", "prepare_submission", "fill_answer", "review_submission", "request_tan", "capture_tan", "sign", "receipt", "api_submit"}
     names = {item["function"]["name"] for item in model_tools(exclude=excluded)}
     assert not names & excluded
     assert {"navigate", "record", "cite", "schema"} <= names

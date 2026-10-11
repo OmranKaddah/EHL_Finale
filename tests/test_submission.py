@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
@@ -55,6 +56,7 @@ async def test_uncertain_signing_stays_attempted(telemetry):
     submission = Submission(context(), browser, telemetry)
     submission.prepare(PricingResult(answer=answer()))
     submission.state = SubmissionState.TAN_REQUESTED
+    submission.reviewed_at = datetime.now(timezone.utc)
     with pytest.raises(TimeoutError):
         await submission.sign({"ref": "button", "reviewed": True, "omissions_confirmed": True})
     assert submission.state == SubmissionState.SIGNING_ATTEMPTED
@@ -91,6 +93,7 @@ async def test_receipt_requires_fresh_portal_observation_and_uncertain_retry_is_
     old = Observation(id="o1", action_id=1, tab=0, url="http://synthetic.test", title="Receipt",
                       text="SYN-R accepted receipt C-1")
     submission.state = SubmissionState.TAN_REQUESTED
+    submission.reviewed_at = datetime.now(timezone.utc)
     await submission.sign({"ref": "send", "reviewed": True, "omissions_confirmed": True})
     args = {"receipt_id": "C-1", "excerpt": "accepted receipt C-1"}
     with pytest.raises(ValueError, match="predates"):
@@ -106,3 +109,18 @@ async def test_receipt_requires_fresh_portal_observation_and_uncertain_retry_is_
     await submission.request_tan({"ref": "request"})
     assert submission.state == SubmissionState.TAN_REQUESTED
     assert browser.latest_tan is None
+
+
+def test_review_blocks_a_wrong_visible_material_before_signing(telemetry):
+    submission = Submission(context(), MagicMock(), telemetry)
+    result = answer()
+    result["positions"][0] |= {"base_unit_price": Decimal("1.01"), "surcharge_per_unit": Decimal("0"),
+                               "packaging_per_unit": Decimal("0")}
+    submission.prepare(PricingResult(answer=result))
+    wrong = Observation(id="o1", action_id=1, tab=0, url="http://synthetic.test", title="Offer review",
+                        text="Position A Material SYN-WRONG Unit price 1.01 Net total 3.03")
+    with pytest.raises(ValueError, match="material_number"):
+        submission.review_current_form(wrong)
+    correct = Observation(id="o2", action_id=2, tab=0, url="http://synthetic.test", title="Offer review",
+                          text="Position A Material SYN-M Unit price 1.01 Net total 3.03")
+    assert submission.review_current_form(correct)["reviewed"]

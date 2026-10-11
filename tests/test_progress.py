@@ -21,6 +21,15 @@ def test_pagination_and_newly_revealed_content_count_as_progress():
     assert signature("o1", 0, "Page 1") != signature("o2", 0, "Page 2")
 
 
+def test_filled_state_allows_one_legitimate_session_relogin_step():
+    action = AgentAction(action="fill", summary="Enter password", args={"ref": "o1-f0-e0", "secret": "portal:password"})
+    resumed = AgentAction(action="fill", summary="Enter password", args={"ref": "o2-f0-e0", "secret": "portal:password"})
+    base = dict(action_id=1, tab=0, url="https://synthetic.test/login", title="Login", text="Session expired")
+    blank = Observation(id="o1", controls=[{"ref": "o1-f0-e0", "label": "Password", "filled": False}], **base)
+    filled = Observation(id="o2", controls=[{"ref": "o2-f0-e0", "label": "Password", "filled": True}], **base)
+    assert action_signature(action, blank) != action_signature(resumed, filled)
+
+
 def test_explicit_navigation_cycle_allows_one_retry_then_stops():
     obs = Observation(id="o1", action_id=1, tab=0, url="https://synthetic.test/documents", title="Docs", text="Page")
     action = AgentAction(action="navigate", summary="Open requirement", args={"url": "/specification#section-2"})

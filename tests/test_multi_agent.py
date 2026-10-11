@@ -97,6 +97,45 @@ def test_verification_gate_is_classified_without_a_visual_model_call():
     assert not PopupClassifier.needed(Observation())
 
 
+def test_unlocked_mail_list_is_not_reclassified_from_a_stale_preview_gate():
+    class Observation:
+        id = "o8"
+        text = "Entsperrt — Ich bin kein Roboter — Geschützter Bereich"
+        controls = [
+            {"type": "range", "value": "100"},
+            {"type": "checkbox", "checked": True},
+            # An empty preview has its own dormant controls, also at max.
+            {"type": "range", "value": "100"},
+            {"type": "checkbox", "checked": False},
+        ]
+
+    assert not PopupClassifier.verification_gate(Observation())
+
+
+def test_unlocked_list_overrides_a_dormant_preview_slider():
+    class Observation:
+        id = "o8b"
+        text = "Entsperrt — Ich bin kein Roboter — Geschützter Bereich"
+        controls = [
+            {"type": "range", "value": "100"},
+            {"type": "checkbox", "checked": True},
+            # The adjacent empty preview remains locked but is not needed.
+            {"type": "range", "value": "0"},
+            {"type": "checkbox", "checked": False},
+        ]
+
+    assert not PopupClassifier.verification_gate(Observation())
+
+
+def test_incomplete_slider_remains_a_verification_gate():
+    class Observation:
+        id = "o9"
+        text = "Zum Entsperren ganz nach rechts ziehen — Ich bin kein Roboter"
+        controls = [{"type": "range", "value": "0"}, {"type": "checkbox", "checked": False}]
+
+    assert PopupClassifier.verification_gate(Observation())
+
+
 async def test_multi_dashboard_serves_each_agent_state(tmp_path):
     root = Telemetry(tmp_path / "root", Redactor(), console=False)
     tender = Telemetry(tmp_path / "tender", root.redactor, console=False, agent="tender")
@@ -138,7 +177,36 @@ def test_research_only_blocks_the_runtime_declared_submission_path(telemetry):
     assert controller._targets_submission("navigate", {"url": "/bid"})
     assert controller._targets_submission("click", {"ref": "o1-f0-e1"})
     assert not controller._targets_submission("navigate", {"url": "/questions"})
+
+
+def test_already_filled_credential_requires_login_click(telemetry):
+    run = RunContext(challenge_id="rfq", brief="fixture", access=[],
+                     submission={"kind": "site", "url": "https://tender.test"}, answer_schema={})
+    controller = Orchestrator(run, Config(False, (), "qwen", "qwen", "http://localhost", "local"), None,
+                              None, telemetry, None, research_only=True)
+    controller.observation = type("Observation", (), {"url": "https://tender.test/login", "controls": [
+        {"ref": "o1-f0-e1", "label": "Passwort", "filled": True, "blocked_by_modal": False}
+    ]})()
+    with pytest.raises(ValueError, match="already filled"):
+        asyncio.run(controller.execute(type("Action", (), {"action": "fill", "args": {
+            "ref": "o1-f0-e1", "secret": "tender:password"}})()))
     assert not controller._targets_submission("navigate", {"url": "https://tender.test"})
+
+
+def test_completed_search_is_not_resubmitted_after_a_robot_gate(telemetry):
+    run = RunContext(challenge_id="rfq", brief="fixture", access=[],
+                     submission={"kind": "site", "url": "https://mail.test"}, answer_schema={})
+    controller = Orchestrator(run, Config(False, (), "qwen", "qwen", "http://localhost", "local"), None,
+                              None, telemetry, None, research_only=True)
+    controller.observation = type("Observation", (), {"url": "https://mail.test/?folder=inbox&q=rules", "controls": [
+        {"ref": "o1-f0-e1", "label": "Suchbegriff", "type": "search", "filled": True, "value": "Konditionsregeln"},
+        {"ref": "o1-f0-e2", "label": "Suchen", "type": "submit", "filled": False,
+         "blocked_by_modal": False},
+    ]})()
+    key = controller._search_key(controller.observation.controls[1])
+    controller.completed_searches.add(key)
+    with pytest.raises(ValueError, match="already submitted"):
+        asyncio.run(controller.execute(type("Action", (), {"action": "click", "args": {"ref": "o1-f0-e2"}})()))
 
 
 async def test_schema_without_a_kind_fails_with_a_recoverable_action_error(telemetry):

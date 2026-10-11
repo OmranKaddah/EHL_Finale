@@ -85,7 +85,7 @@ class AgentAction(StrictModel):
         "navigate", "click", "fill", "select", "check", "press", "scroll", "tab", "frame",
         "observe", "wait", "screenshot", "pixel_click", "drag", "dialog", "document", "cite", "record",
         "schema", "calculate", "prepare_submission", "fill_answer", "request_tan", "capture_tan",
-        "sign", "receipt", "api_submit", "stage", "inspect_evidence", "inspect_controls", "read_links",
+        "review_submission", "sign", "receipt", "api_submit", "stage", "inspect_evidence", "inspect_controls", "read_links",
     ]
     summary: str = Field(max_length=500, description="Brief observable purpose; no private reasoning.")
     args: dict[str, Any] = Field(default_factory=dict)

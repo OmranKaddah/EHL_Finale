@@ -35,6 +35,7 @@ def model_tools(*, exclude: set[str] | frozenset[str] = frozenset()):
         "calculate": ("Calculate deterministic prices from verified evidence", {"partial": "boolean"}, []),
         "prepare_submission": ("Validate the calculated answer against this run's schema", {"partial": "boolean"}, []),
         "fill_answer": ("Fill computed answer paths into observed form fields", {"fields": "array:object"}, ["fields"]),
+        "review_submission": ("Verify the current portal form visibly contains every computed bid value before requesting TAN/signing", {}, []),
         "request_tan": ("Request a new TAN only when the answer is ready", {"ref": "string"}, ["ref"]),
         "capture_tan": ("Capture the current matching signing message without exposing its TAN", {"observation": "string"}, ["observation"]),
         "sign": ("Sign after reviewing values and omissions", {"ref": "string", "reviewed": "boolean", "omissions_confirmed": "boolean"}, ["ref", "reviewed", "omissions_confirmed"]),
