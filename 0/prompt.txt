@@ -1,0 +1,1 @@
+OpenAI für die Rechnung	⏳ wartet auf euer OPENAI_API_KEY-Secret hä?
