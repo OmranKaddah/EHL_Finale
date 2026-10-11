@@ -1,6 +1,20 @@
 {
-  "setup": ["uv", "sync"],
-  "run": ["uv", "run", "--no-sync", "python", "-m", "rfq_agent"],
+  "setup": [
+    "uv",
+    "sync",
+    "--frozen",
+    "--no-dev"
+  ],
+  "run": [
+    "uv",
+    "run",
+    "--no-sync",
+    "python",
+    "-m",
+    "rfq_agent"
+  ],
   "browsers": 4,
-  "models": ["qwen"]
+  "models": [
+    "qwen"
+  ]
 }

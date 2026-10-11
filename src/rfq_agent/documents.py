@@ -46,6 +46,8 @@ class InvestigationSession:
         self.source_url = None
         self.offset = 0
         self.page_offset = 0
+        # Set only by the submission owner; investigators keep every safety guard.
+        self.authorize = None
 
     async def observe(self, site_id):
         from .planner import observe, MAX_PAGE_TEXT, _credential_values
@@ -122,7 +124,7 @@ class InvestigationSession:
         self.page_offset = 0
         if kind != 'click':
             if kind == 'open_site': self.frame = self.document = self.archive = None
-            return await _apply(action, self.frame or self.page, self.sites, site_id)
+            return await _apply(action, self.frame or self.page, self.sites, site_id, self.authorize)
         origin = self.page
         downloads = []; popups = []
         on_download = lambda item: downloads.append(item)
@@ -130,7 +132,7 @@ class InvestigationSession:
         origin.on('download', on_download)
         origin.on('popup', on_popup)
         try:
-            result = await _apply(action, self.frame or self.page, self.sites, site_id)
+            result = await _apply(action, self.frame or self.page, self.sites, site_id, self.authorize)
             if popups:
                 popup = popups[-1]
                 await popup.wait_for_load_state('domcontentloaded', timeout=10000)

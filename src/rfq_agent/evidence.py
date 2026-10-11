@@ -13,6 +13,8 @@ class Evidence:
     title: str
     step: int
     worker_id: str = ""
+    kind: str = ""
+    subject: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -28,7 +30,8 @@ class EvidenceLedger:
     async def add(self, item: Evidence) -> None:
         async with self._lock:
             # Avoid duplicate records when parallel investigators reach the same page.
-            if not any((old.site_id, old.url, old.quote) == (item.site_id, item.url, item.quote)
+            if not any((old.site_id, old.url, old.quote, old.kind, old.subject)
+                       == (item.site_id, item.url, item.quote, item.kind, item.subject)
                        for old in self._items):
                 self._items.append(item)
 
