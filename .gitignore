@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.tar.gz
+*.out
+*.log
+r*.json
+*.tmp
+*.json.tmp
+evidence*.txt
+dev_phase.json
