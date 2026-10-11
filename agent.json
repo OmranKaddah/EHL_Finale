@@ -1,6 +1,17 @@
 {
-  "setup": ["sh", "-c", "uv venv .venv && uv pip install --python .venv/bin/python -r requirements-rfq.txt && uv pip install --python .venv/bin/python --no-deps ."],
-  "run": [".venv/bin/python", "-m", "hackathon_toolkit.rfq.runtime"],
-  "browsers": 1,
-  "models": ["qwen"]
+  "setup": [
+    "uv",
+    "sync"
+  ],
+  "run": [
+    "uv",
+    "run",
+    "--no-sync",
+    "python",
+    "agent.py"
+  ],
+  "models": [
+    "qwen"
+  ],
+  "browsers": 4
 }
