@@ -1,0 +1,1 @@
+kann man auch die einzelnen schritte einzelnen im test lauf testen? macht das mehr sinn?
