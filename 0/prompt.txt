@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>b2uly185b</task-id>
+<tool-use-id>toolu_013tSGgp7gWgH9NXvHTuBBav</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-Moritz-workspace-EHL-Finale/9c3ef7c5-c17a-44c8-bdcc-c25f3bce0604/tasks/b2uly185b.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for current run to end, then start next test run" completed (exit code 0)</summary>
+</task-notification>
