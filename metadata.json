@@ -1,0 +1,48 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4N3WDTGW8VDSN63ZN95M092",
+  "strategy": "manual-commit",
+  "branch": "Leonie",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "agent.json",
+    "docs/PHASE1_PROGRESS.md",
+    "pyproject.toml",
+    "scripts/package.py",
+    "src/rfq_agent/__main__.py",
+    "src/rfq_agent/coordinator.py",
+    "src/rfq_agent/deadline.py",
+    "src/rfq_agent/documents.py",
+    "src/rfq_agent/draft.py",
+    "src/rfq_agent/evidence.py",
+    "src/rfq_agent/mailcheck.py",
+    "src/rfq_agent/planner.py",
+    "src/rfq_agent/redact.py",
+    "src/rfq_agent/submission.py",
+    "src/rfq_agent/submit_agent.py",
+    "tests/__init__.py",
+    "tests/test_coordinator.py",
+    "tests/test_package.py",
+    "tests/test_review_blockers.py",
+    "tests/test_review_blockers_browser.py",
+    "tests/test_submission.py",
+    "tests/test_submit_agent.py",
+    "uv.lock"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 572,
+    "cache_creation_tokens": 572123,
+    "cache_read_tokens": 41640654,
+    "output_tokens": 237332,
+    "api_call_count": 233
+  }
+}
