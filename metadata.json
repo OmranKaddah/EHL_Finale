@@ -1,0 +1,41 @@
+{
+  "cli_version": "0.11.4",
+  "checkpoint_id": "01M4MQY84D94NDX4SM9EERD66J",
+  "strategy": "manual-commit",
+  "branch": "Leonie",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "adira-100/Adira-sub_0b56513a87415065.tar.gz",
+    "adira-100/README.md",
+    "adira-100/agent/.gitignore",
+    "adira-100/agent/README.md",
+    "adira-100/agent/agent.json",
+    "adira-100/agent/agent.py",
+    "adira-100/agent/browsers.py",
+    "adira-100/agent/loop.py",
+    "adira-100/agent/models.py",
+    "adira-100/agent/pricing.py",
+    "adira-100/agent/pyproject.toml",
+    "adira-100/agent/run.py",
+    "adira-100/agent/tests/test_kit.py",
+    "adira-100/agent/uv.lock",
+    "adira-100/agent/webtools.py",
+    "adira-100/demo/adira-bid-desk.html"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 3446,
+    "cache_creation_tokens": 0,
+    "cache_read_tokens": 522624,
+    "output_tokens": 1024,
+    "api_call_count": 9
+  }
+}
