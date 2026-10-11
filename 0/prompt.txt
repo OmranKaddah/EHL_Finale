@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>bwtsrfx60</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-Moritz-workspace-EHL-Finale/9c3ef7c5-c17a-44c8-bdcc-c25f3bce0604/tasks/bwtsrfx60.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for new run to finish" completed (exit code 0)</summary>
+</task-notification>
