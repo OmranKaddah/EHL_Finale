@@ -1,0 +1,1 @@
+Read https://ehl-challenge.atira.ai/llms.txt, then set us up and help us build, test and submit an agent for this challenge. mach schnell
