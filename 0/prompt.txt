@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>blshhogem</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-Moritz-workspace-EHL-Finale/9c3ef7c5-c17a-44c8-bdcc-c25f3bce0604/tasks/blshhogem.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for computed answer in new run" completed (exit code 0)</summary>
+</task-notification>
