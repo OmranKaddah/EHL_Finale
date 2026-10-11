@@ -1,0 +1,902 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Adira Bid Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: source documents on top, then the extracted facts on the left as an editable form and the live bid on the right, which recalculates on every keystroke. */
+:root {
+  --bg: #eef2f6;
+  --surface: #ffffff;
+  --sunken: #e2e8ef;
+  --ink: #12233b;
+  --muted: #56667a;
+  --line: #cbd5e0;
+  --accent: #1f4fd6;
+  --accent-ink: #ffffff;
+  --accent-soft: #dde6fb;
+  --ok: #1d7a4f;
+  --ok-soft: #d9efe3;
+  --warn: #8a5200;
+  --warn-soft: #fbecd0;
+  --display: "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r: 5px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d141d; --surface: #151f2c; --sunken: #1c2938; --ink: #e3eaf2; --muted: #93a3b5; --line: #2a394b;
+    --accent: #7ea2ff; --accent-ink: #0a1730; --accent-soft: #1c2c52; --ok: #5cc592; --ok-soft: #163526; --warn: #e9b458; --warn-soft: #3a2c10;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d141d; --surface: #151f2c; --sunken: #1c2938; --ink: #e3eaf2; --muted: #93a3b5; --line: #2a394b;
+  --accent: #7ea2ff; --accent-ink: #0a1730; --accent-soft: #1c2c52; --ok: #5cc592; --ok-soft: #163526; --warn: #e9b458; --warn-soft: #3a2c10;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.5 var(--body); padding: 0 clamp(16px, 3vw, 36px); padding-block: 0 56px; }
+h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; line-height: 1.05; }
+p { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 22px; }
+.eyebrow { font: 600 12px/1 var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--mono); font-size: .88em; }
+.muted { color: var(--muted); font-size: 14.5px; }
+
+.top { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: end; justify-content: space-between; padding-block: 26px 16px; border-bottom: 2px solid var(--ink); }
+.top h1 { font-size: clamp(34px, 5vw, 52px); font-weight: 700; }
+.top h1 span { color: var(--accent); }
+.top p { color: var(--muted); max-width: 62ch; margin-top: 8px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.step { display: grid; gap: 12px; min-width: 0; }
+.step-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; justify-content: space-between; }
+.step-head h2 { font-size: 24px; font-weight: 600; }
+.step-head h2 small { font: 700 15px/1 var(--display); color: var(--accent); margin-right: 8px; letter-spacing: .06em; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: var(--r); padding: 8px 16px; font-weight: 600; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.btn.small { padding: 4px 10px; font-size: 14px; font-weight: 500; }
+.btn:disabled { opacity: .45; cursor: default; }
+.banner { background: var(--warn-soft); color: var(--ink); border-left: 4px solid var(--warn); border-radius: var(--r); padding: 8px 12px; font-size: 14.5px; }
+.status { font-size: 14.5px; color: var(--muted); min-height: 1.5em; }
+
+.fld { display: grid; gap: 4px; font-size: 13px; color: var(--muted); min-width: 0; }
+.fld input, .fld select, .fld textarea { font: 14px/1.4 var(--mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; width: 100%; min-width: 0; }
+.fld textarea { resize: vertical; }
+.fld.check { grid-template-columns: auto 1fr; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.fld.check input { width: auto; accent-color: var(--accent); }
+.srcs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.srcs textarea { min-height: 150px; font-size: 13px; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 1020px) { .main { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 10px; min-width: 0; }
+.panel h3 { font-size: 19px; font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; }
+.grid .wide { grid-column: 1 / -1; }
+.grid .half { grid-column: span 2; }
+@media (max-width: 420px) { .grid .half { grid-column: 1 / -1; } }
+details.pos { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+details.pos > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+details.pos > summary::-webkit-details-marker { display: none; }
+details.pos > summary::before { content: "▸"; color: var(--muted); }
+details.pos[open] > summary::before { content: "▾"; }
+details.pos > summary b { font: 600 19px/1 var(--display); }
+details.pos > summary span { color: var(--muted); font-size: 14px; }
+details.pos > summary .del { margin-left: auto; }
+.pos-body { padding: 4px 14px 14px; display: grid; gap: 12px; }
+.sub { font: 600 12px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 10px; }
+
+.bid { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: grid; gap: 12px; min-width: 0; }
+@media (max-width: 1020px) { .bid { position: static; } }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { padding: 7px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+th { font: 600 11.5px/1.2 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--sunken); }
+tbody tr[aria-selected="true"] { background: var(--accent-soft); }
+td.num { font-family: var(--mono); font-size: 13.5px; }
+tfoot td { border-bottom: 0; font-weight: 600; }
+.facts-line { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 14px; color: var(--muted); }
+.facts-line b { color: var(--ink); font-weight: 600; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; }
+.steps li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 14px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.steps li:last-child { border-bottom: 0; }
+.steps .v { font: 500 14px/1.5 var(--mono); text-align: right; }
+.steps .why { grid-column: 1 / -1; font-size: 13.5px; color: var(--muted); }
+.steps li.sum .v { background: var(--accent-soft); padding: 0 6px; border-radius: 3px; font-weight: 600; }
+.steps li.sum span:first-child { font-weight: 600; }
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: 14.5px; }
+.checks li { background: var(--warn-soft); border-radius: 3px; padding: 5px 9px; }
+.allok { background: var(--ok-soft); color: var(--ok); border-radius: 3px; padding: 5px 9px; font-size: 14.5px; font-weight: 500; }
+
+/* Flow strip: the three steps as one line, each showing its live result */
+.flow { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr); gap: 8px; align-items: stretch; }
+.flow .arrow { align-self: center; font: 600 26px/1 var(--display); color: var(--muted); }
+.flow-step { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; grid-template-columns: auto minmax(0,1fr); gap: 2px 12px; align-items: center; min-width: 0; }
+.flow-step .n { grid-row: span 2; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font: 700 20px/1 var(--display); background: var(--sunken); color: var(--ink); }
+.flow-step b { font: 600 21px/1.1 var(--display); }
+.flow-step small { font-size: 14.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flow-step[aria-current="step"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.flow-step[aria-current="step"] .n { background: var(--accent); color: var(--accent-ink); }
+.flow-step[aria-current="step"] small { color: var(--bg); opacity: .8; }
+@media (max-width: 720px) { .flow { grid-template-columns: 1fr; } .flow .arrow { display: none; } }
+.view { display: grid; gap: 14px; min-width: 0; }
+.view-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: end; justify-content: space-between; }
+.view-head h2 { font-size: 28px; font-weight: 600; }
+.view-head p { color: var(--muted); max-width: 70ch; margin-top: 4px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding-top: 4px; }
+.btn.big { padding: 12px 22px; font-size: 17px; }
+.srcs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 720px) { .srcs { grid-template-columns: 1fr; } }
+.src { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; display: grid; grid-template-rows: auto 1fr; min-width: 0; overflow: hidden; }
+.src-top { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; padding: 9px 12px; background: var(--sunken); }
+.src-top b { font: 600 19px/1.1 var(--display); }
+.src-top small { color: var(--muted); font-size: 14px; }
+.src-top .cnt { margin-left: auto; font: 500 12px/1 var(--mono); color: var(--muted); }
+.src textarea { border: 0; background: var(--surface); color: var(--ink); font: 13px/1.5 var(--mono); padding: 10px 12px; min-height: 190px; width: 100%; resize: vertical; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 10px; }
+details.pos { border-radius: 8px; }
+details.pos > summary { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 6px 14px; align-items: center; padding: 12px 14px; }
+details.pos > summary::before { content: none; }
+details.pos > summary .who { display: grid; gap: 2px; }
+details.pos > summary .who b { font: 700 24px/1 var(--display); }
+details.pos > summary .who span { font: 500 13px/1.2 var(--mono); color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 14px; background: var(--sunken); border-radius: 4px; padding: 3px 8px; white-space: nowrap; }
+.tag b { font: 500 13.5px/1 var(--mono); }
+.tag.warn { background: var(--warn-soft); }
+.edit-hint { font-size: 14px; color: var(--accent); font-weight: 600; white-space: nowrap; }
+details.pos[open] .edit-hint .o, details.pos:not([open]) .edit-hint .c { display: none; }
+.bidgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 960px) { .bidgrid { grid-template-columns: 1fr; } }
+.col { display: grid; gap: 14px; min-width: 0; }
+.hero { background: var(--ink); color: var(--bg); border-radius: 8px; padding: 16px 18px; display: flex; flex-wrap: wrap; gap: 10px 26px; align-items: end; justify-content: space-between; }
+.hero .eyebrow { color: var(--bg); opacity: .75; }
+.hero .big { font: 700 clamp(38px, 6vw, 56px)/1 var(--display); font-variant-numeric: tabular-nums; margin-top: 6px; }
+.hero .facts-line { color: var(--bg); opacity: .9; }
+.hero .facts-line b { color: var(--bg); }
+.verdict { border-radius: 8px; padding: 10px 14px; font-weight: 600; font-size: 16px; }
+.verdict.ok { background: var(--ok-soft); color: var(--ok); }
+.verdict.warn { background: var(--warn-soft); color: var(--ink); }
+.receipt { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 8px; }
+.steps li { grid-template-columns: auto minmax(12px, 1fr) auto; align-items: baseline; border-bottom: 0; padding: 5px 0; }
+.steps li .dots { border-bottom: 2px dotted var(--line); transform: translateY(-4px); }
+.steps .why { grid-column: 1 / -1; }
+.steps li.sum { border-top: 3px double var(--ink); margin-top: 6px; padding-top: 9px; }
+.steps li.sum span:first-child { font: 600 20px/1 var(--display); }
+.steps li.sum .v { font-size: 17px; }
+.steps li.lead { border-top: 1px dashed var(--line); margin-top: 4px; padding-top: 8px; }
+
+/* Rule cards: each pricing rule as a small picture and one plain sentence */
+.rules-head { font-size: 26px; font-weight: 600; margin-top: 8px; }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.rule { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.rule h4 { font: 600 21px/1.1 var(--display); margin: 0; display: flex; gap: 10px; justify-content: space-between; align-items: baseline; }
+.rule h4 .amt { font: 500 14px/1 var(--mono); background: var(--accent-soft); padding: 4px 7px; border-radius: 4px; white-space: nowrap; }
+.rule .say { font-size: 15.5px; line-height: 1.45; }
+.ladder { display: flex; gap: 5px; align-items: flex-end; }
+.rung { flex: 1; min-width: 0; background: var(--sunken); border-radius: 5px 5px 0 0; padding: 8px 6px; display: grid; gap: 3px; text-align: center; }
+.rung small { font-size: 12.5px; color: var(--muted); }
+.rung b { font: 500 12.5px/1.2 var(--mono); overflow-wrap: anywhere; }
+.rung.on { background: var(--accent); color: var(--accent-ink); }
+.rung.on small { color: var(--accent-ink); }
+.chain { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chain span { font: 500 13.5px/1 var(--mono); background: var(--sunken); padding: 7px 9px; border-radius: 5px; }
+.chain span.op { background: none; padding: 0 1px; color: var(--muted); }
+.chain span.res { background: var(--accent); color: var(--accent-ink); }
+.meter { display: grid; gap: 5px; }
+.meter .lab { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.track { position: relative; height: 16px; background: var(--sunken); border-radius: 8px; }
+.track i { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 8px; }
+.track i.ok { background: var(--ok); }
+.track u { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); border-radius: 2px; }
+.timeline { display: flex; gap: 4px; }
+.win { flex: 1; min-width: 0; background: var(--sunken); border-radius: 5px; padding: 7px 8px; display: grid; gap: 3px; }
+.win small { font: 400 11.5px/1.3 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.win b { font: 500 13.5px/1 var(--mono); }
+.win.on { background: var(--accent); color: var(--accent-ink); }
+.win.on small { color: var(--accent-ink); }
+.boxes { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.box { width: 38px; height: 34px; border: 2px solid var(--ink); border-radius: 4px; display: grid; place-items: center; font: 500 12.5px/1 var(--mono); background: var(--accent-soft); }
+.box.part { background: var(--surface); border-style: dashed; }
+.boxes .more { font-size: 14px; color: var(--muted); }
+.split { display: flex; height: 30px; gap: 3px; }
+.split div { min-width: 26px; background: var(--sunken); border-radius: 4px; display: grid; place-items: center; font: 500 12px/1 var(--mono); overflow: hidden; }
+.split div.me { background: var(--accent); color: var(--accent-ink); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow" data-i="eyebrow"></div>
+      <h1>Adira <span>Bid Desk</span></h1>
+      <p data-i="lede"></p>
+    </div>
+    <div class="chips" role="group" aria-label="Language">
+      <button class="chip" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
+      <button class="chip" id="lang-zh" data-lang="zh" aria-pressed="false">中文</button>
+    </div>
+  </header>
+
+  <div class="banner" id="example-banner" data-i="example_banner"></div>
+
+  <nav class="flow" aria-label="Steps">
+    <button class="flow-step" data-view="src" type="button"><span class="n">1</span><b data-i="s1"></b><small id="fl-src"></small></button>
+    <span class="arrow" aria-hidden="true">→</span>
+    <button class="flow-step" data-view="facts" type="button"><span class="n">2</span><b data-i="s2"></b><small id="fl-facts"></small></button>
+    <span class="arrow" aria-hidden="true">→</span>
+    <button class="flow-step" data-view="bid" type="button"><span class="n">3</span><b data-i="s3"></b><small id="fl-bid"></small></button>
+  </nav>
+
+  <section class="view" id="view-src" aria-labelledby="h1s">
+    <div class="view-head">
+      <div><h2 id="h1s" data-i="v1"></h2><p data-i="s1_help"></p></div>
+      <div class="row">
+        <label class="fld" style="grid-template-columns:auto auto;align-items:center;gap:8px" for="scenario-date"><span data-i="date"></span><input id="scenario-date" type="date"></label>
+        <button class="btn ghost small" id="load-example" data-i="load_example" type="button"></button>
+        <button class="btn ghost small" id="clear-all" data-i="clear_all" type="button"></button>
+      </div>
+    </div>
+    <div class="srcs">
+      <div class="src"><div class="src-top"><b id="lt" data-i="src_tender_t"></b><small data-i="src_tender_h"></small><span class="cnt" id="cnt-tender"></span></div><textarea id="src-tender" aria-labelledby="lt" spellcheck="false"></textarea></div>
+      <div class="src"><div class="src-top"><b id="ls" data-i="src_spec_t"></b><small data-i="src_spec_h"></small><span class="cnt" id="cnt-spec"></span></div><textarea id="src-spec" aria-labelledby="ls" spellcheck="false"></textarea></div>
+      <div class="src"><div class="src-top"><b id="lm" data-i="src_mail_t"></b><small data-i="src_mail_h"></small><span class="cnt" id="cnt-mail"></span></div><textarea id="src-mail" aria-labelledby="lm" spellcheck="false"></textarea></div>
+      <div class="src"><div class="src-top"><b id="le" data-i="src_erp_t"></b><small data-i="src_erp_h"></small><span class="cnt" id="cnt-erp"></span></div><textarea id="src-erp" aria-labelledby="le" spellcheck="false"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn big" id="extract" data-i="extract" type="button" disabled></button>
+      <button class="btn ghost" id="stop" data-i="stop" type="button" hidden></button>
+      <button class="btn ghost" data-go="facts" data-i="to_facts" type="button"></button>
+      <span class="status" id="extract-status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="view" id="view-facts" aria-labelledby="h2s" hidden>
+    <div class="view-head">
+      <div><h2 id="h2s" data-i="v2"></h2><p data-i="s2_help"></p></div>
+      <button class="btn ghost small" id="add-pos" data-i="add_pos" type="button"></button>
+    </div>
+    <div class="panel">
+      <h3 data-i="order_level"></h3>
+      <div class="grid" id="order-form"></div>
+    </div>
+    <div id="positions" class="view"></div>
+    <div class="actions"><button class="btn big" data-go="bid" data-i="to_bid" type="button"></button></div>
+  </section>
+
+  <section class="view" id="view-bid" aria-labelledby="h3s" hidden>
+    <div class="view-head">
+      <div><h2 id="h3s" data-i="v3"></h2><p data-i="s3_help"></p></div>
+      <div class="row">
+        <button class="btn ghost small" id="copy-json" data-i="copy_json" type="button"></button>
+        <button class="btn ghost small" id="save-json" data-i="save_json" type="button" hidden></button>
+        <button class="btn ghost small" id="save-csv" data-i="save_csv" type="button" hidden></button>
+        <span class="status" id="export-status" aria-live="polite"></span>
+      </div>
+    </div>
+    <div class="bidgrid">
+      <div class="col">
+        <div class="hero">
+          <div><div class="eyebrow" data-i="t_total"></div><div class="big" id="total"></div></div>
+          <div class="facts-line" id="bid-facts"></div>
+        </div>
+        <div class="panel">
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th data-i="t_pos"></th><th data-i="t_mat"></th><th data-i="t_qty"></th><th data-i="t_unit"></th><th data-i="t_lead"></th><th data-i="t_line"></th></tr></thead>
+              <tbody id="rows"></tbody>
+            </table>
+          </div>
+          <p class="muted" data-i="pick_hint"></p>
+        </div>
+        <div id="checks-box" class="col"></div>
+      </div>
+      <div class="receipt" aria-live="polite">
+        <h3 id="b-title" style="font-size:21px;font-weight:600"></h3>
+        <ol class="steps" id="b-steps"></ol>
+      </div>
+    </div>
+    <h3 class="rules-head" id="r-title"></h3>
+    <div class="rules" id="rules"></div>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/decimal.js/10.4.3/decimal.min.js"></script>
+<script>
+"use strict";
+Decimal.set({ precision: 40, rounding: Decimal.ROUND_HALF_UP });
+const Z = new Decimal(0), ONE = new Decimal(1);
+
+/* ---------- pricing engine: exact decimals, each rule applied once ---------- */
+function D(x) {
+  if (x == null || typeof x === "boolean") return Z;
+  if (Decimal.isDecimal(x)) return x;
+  if (typeof x === "number") return Number.isFinite(x) ? new Decimal(String(x)) : Z;
+  const m = String(x).trim().match(/-?\d[\d.,]*/);
+  if (!m) return Z;
+  let n = m[0].replace(/[.,]+$/, "");
+  if (n.includes(",") && n.includes(".")) n = n.lastIndexOf(",") > n.lastIndexOf(".") ? n.replace(/\./g, "").replace(",", ".") : n.replace(/,/g, "");
+  else if (n.includes(",")) n = n.replace(",", ".");
+  try { return new Decimal(n); } catch (e) { return Z; }
+}
+const q2 = (x) => x.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+function parseNumber(text, fmt) {
+  const m = String(text || "").match(/-?\d[\d.,]*/);
+  let t = m ? m[0].replace(/[.,]+$/, "") : "";
+  t = String(fmt || "de-DE").toLowerCase().startsWith("en") ? t.replace(/,/g, "") : t.replace(/\./g, "").replace(",", ".");
+  try { return t && t !== "-" ? new Decimal(t) : Z; } catch (e) { return Z; }
+}
+function allocateCents(total, weights) {            // largest remainder, ties to the lower key
+  const keys = Object.keys(weights), cents = q2(total).times(100), wsum = keys.reduce((a, k) => a.plus(weights[k]), Z), out = {};
+  if (cents.isZero() || wsum.isZero()) { keys.forEach((k) => out[k] = Z); return out; }
+  const raw = {}, base = {}; let used = Z;
+  keys.forEach((k) => { raw[k] = cents.times(weights[k]).div(wsum); base[k] = raw[k].floor(); used = used.plus(base[k]); });
+  const left = cents.minus(used).toNumber();
+  const order = [...keys].sort((a, b) => { const c = raw[b].minus(base[b]).cmp(raw[a].minus(base[a])); return c || (a < b ? -1 : a > b ? 1 : 0); });
+  order.slice(0, left).forEach((k) => base[k] = base[k].plus(1));
+  keys.forEach((k) => out[k] = base[k].div(100));
+  return out;
+}
+function marginalBands(amount, bands) {
+  let total = Z;
+  for (const b of bands) {
+    const lo = D(b.from), top = b.to === "" || b.to == null ? amount : Decimal.min(amount, D(b.to));
+    if (top.gt(lo)) total = total.plus(top.minus(lo).times(D(b.percent)).div(100));
+  }
+  return q2(total);
+}
+const lines = (text, n) => String(text || "").split("\n").map((l) => l.split(";").map((c) => c.trim())).filter((c) => c.some(Boolean) && c.length >= n);
+
+function compute(f, date) {
+  const rows = [], skipped = [];
+  for (const p of f.positions) {
+    const qty = D(p.quantity_pieces).floor().toNumber();
+    if (!(qty > 0)) { skipped.push(p.position); continue; }
+    const cur = String(p.currency || "EUR").trim().toUpperCase() || "EUR";
+    let unit = D(p.price_unit_pieces); if (unit.lte(0)) unit = ONE;
+    let fx = D(p.eur_per_currency_unit); if (fx.lte(0)) fx = ONE;
+    if (cur === "EUR") fx = ONE;                                             // a EUR condition is never converted
+    const scales = lines(p.scalesText, 2).map(([a, b]) => ({ min: D(a), price: parseNumber(b, p.number_format), text: b })).filter((s) => !s.price.isZero());
+    const ok = scales.filter((s) => s.min.lte(qty)).sort((a, b) => b.min.cmp(a.min));
+    const scale = ok[0] || null;                                             // highest scale not above the position's own quantity
+    const base = scale ? q2(scale.price.div(unit).times(fx)) : Z;
+    const rates = lines(p.ratesText, 3).map(([a, b, c]) => ({ from: a || "0000", to: b || "9999", rate: D(c) }));
+    const rate = rates.find((r) => r.from.slice(0, 10) <= date && date <= r.to.slice(0, 10)) || null;
+    const mass = D(p.surcharge_mass_kg), massSur = mass.times(rate ? rate.rate : Z);
+    rows.push({ p, pos: String(p.position), qty, cur, unit, fx, scale, scales, base, rate, rates, mass, massSur, mat: String(p.material || "").trim() });
+  }
+  const undiscounted = q2(rows.reduce((a, r) => a.plus(r.base.times(r.qty)), Z));
+  let pct = D(f.discount_percent);
+  const hasThreshold = String(f.discount_min || "").trim() !== "", threshold = D(f.discount_min);
+  const discountBlocked = hasThreshold && undiscounted.lt(threshold);
+  if (discountBlocked) pct = Z;
+  const members = {}; rows.filter((r) => r.p.pool_member).forEach((r) => members[r.pos] = new Decimal(r.qty).times(D(r.p.allocation_mass)));
+  const poolAlloc = Object.keys(members).length ? allocateCents(D(f.pool_fee), members) : {};
+  const goods = {}; rows.filter((r) => r.p.bonus_member).forEach((r) => goods[r.pos] = r.base.times(r.qty));
+  const bands = lines(f.bandsText, 3).map(([a, b, c]) => ({ from: a, to: b, percent: c }));
+  const goodsSum = Object.values(goods).reduce((a, v) => a.plus(v), Z);
+  const bonusTotal = Object.keys(goods).length ? marginalBands(goodsSum, bands) : Z;
+  const bonusAlloc = Object.keys(goods).length ? allocateCents(bonusTotal, goods) : {};
+  const demand = {}; rows.forEach((r) => demand[r.mat] = (demand[r.mat] || 0) + r.qty);
+  let total = Z; const out = [];
+  for (const r of rows) {
+    const p = r.p, clause = String(p.discount_clause || "base"), fct = ONE.minus(pct.div(100));
+    const baseD = clause === "none" ? r.base : r.base.times(fct);
+    const surD = clause === "base_and_surcharge" ? r.massSur.times(fct) : r.massSur;
+    const poolShare = poolAlloc[r.pos] || Z, setup = D(p.setup_fee_eur).plus(poolShare);
+    let csize = D(p.carton_size).floor().toNumber(); if (!(csize > 0)) csize = 1;
+    const cartons = Math.ceil(r.qty / csize), cartonCost = D(p.carton_tariff_eur).times(cartons);
+    const bonus = bonusAlloc[r.pos] || Z;
+    const unitPrice = q2(baseD.plus(surD).plus(setup.plus(cartonCost).minus(bonus).div(r.qty)));   // rounded once
+    const comMat = String(p.com_material || "").trim(), ceiling = D(p.com_ceiling).toNumber();
+    let lead, why;
+    if (comMat && comMat === r.mat && demand[r.mat] <= ceiling) { lead = D(p.com_weeks); why = "commit"; }
+    else if (D(p.free_stock).gte(demand[r.mat])) { lead = D(p.lead_stock_weeks); why = "stock"; }
+    else { lead = D(p.lead_production_weeks); why = "prod"; }
+    const line = unitPrice.times(r.qty); total = total.plus(line);
+    out.push({ ...r, clause, baseD, surD, poolShare, setup, csize, cartons, cartonCost, bonus, unitPrice, lead: Math.max(0, lead.floor().toNumber()), why, demand: demand[r.mat], line });
+  }
+  return { rows: out, skipped, undiscounted, pct, discountBlocked, threshold, hasThreshold, bonusTotal, goodsSum, total: q2(total) };
+}
+
+/* ---------- example (invented data) ---------- */
+const EXAMPLE = {
+  date: "2030-03-15",
+  src: {
+    tender: "Vergabe VG-2030-0001 · Hydraulikzylinder, Los 1\n\nLeistungsverzeichnis\n01.01  Zylinder gem. Anforderung A-1   40 Stück\n01.02  Zylinder gem. Anforderung A-2   12 Stück\n01.03  Zylinder gem. Anforderung A-3    6 Satz\n\nBieterfragen\nNr. 101 (02.03.2030): Menge 01.02 wird auf 18 Stück geändert.\nNr. 102 (05.03.2030): Menge 01.02 wird auf 30 Stück geändert.\nNr. 103 (06.03.2030): Antwort Nr. 102 wird zurückgezogen.\nNr. 104 (07.03.2030): Zuordnung 01.01: Konditionsgruppe K-A, Verpackungstarif VP-10.\nNr. 105 (07.03.2030): Zuordnung 01.02: K-B, VP-20, Rüstpool RP-1, Projektbonus PB-1.\nNr. 106 (07.03.2030): Zuordnung 01.03: K-C, VP-10, Rüstpool RP-1, Projektbonus PB-1.",
+    spec: "Spezifikation S-77\nRevision R-1 vom 10.01.2030 (ersetzt)\nRevision R-2 vom 20.02.2030 (gültig)\n\nR-2\nA-1  Kataloggruppe KG-10  Bohrung 50  Hub 300  210 bar  Flansch  ohne Zertifikat\nA-2  Kataloggruppe KG-20  Bohrung 80  Hub 450  250 bar  Schwenkzapfen  EN 10204 3.1\nA-3  Kataloggruppe KG-30  Bohrung 32  Hub 120  160 bar  Gewinde  ohne Zertifikat   Stück je Satz: 4",
+    mail: "Von: leitung@   Datum: 08.03.2030   Betreff: VG-2030-0001 Rabattfreigabe\n4 % Auftragsrabatt, sofern der unrabattierte Nettowert mindestens 50.000,00 EUR beträgt.\n\nVon: kalkulation@   Datum: 09.03.2030   Betreff: VG-2030-0001 Konditionsregeln\nK-A: Rabatt nur auf Grundpreis. K-B: Rabatt auf Grundpreis und Metallzuschlag. K-C: kein Rabatt.\n\nVon: kalkulation@   Datum: 09.03.2030   Betreff: VG-2030-0001 Preisindizes\nIndex ST-1: 01.01.2030–28.02.2030 1,10 EUR/kg; 01.03.2030–30.04.2030 1,25 EUR/kg\n\nVon: logistik@   Datum: 10.03.2030   Betreff: VG-2030-0001 Verpackungstarife\nVP-10: 18,00 EUR je Karton. VP-20: 32,50 EUR je Karton.\n\nVon: finanzen@   Datum: 10.03.2030   Betreff: VG-2030-0001 Devisenfixing\n1 USD = 0,9200 EUR\n\nVon: kalkulation@   Datum: 11.03.2030   Betreff: VG-2030-0001 Rüstpools\nRP-1: 900,00 EUR, Umlage nach Menge × Umlagegewicht, Restcents nach größtem Rest.\n\nVon: finanzen@   Datum: 11.03.2030   Betreff: VG-2030-0001 Projektbonus\nPB-1: bis 20.000 EUR 0 %, 20.000–60.000 EUR 2 %, darüber 3 % (Grenzstufen).\n\nVon: logistik@   Datum: 12.03.2030   Betreff: VG-2030-0001 Terminfreigabe\nM-2200: bis 20 Stück Lieferzusage 2 Wochen.\n\nVon: leitung@   Datum: 12.03.2030   Betreff: VG-2030-0001-A Rabattfreigabe\n9 % Auftragsrabatt.",
+    erp: "M-1100  KG-10  Status 01 freigegeben  Index ST-1  Zuschlagsmasse 9,4 kg  Umlagegewicht 12,5  8 Stück je Karton\n  Kondition EUR je 1 ST (de-DE): ab 1: 1.480,00 · ab 25: 1.395,50 · ab 100: 1.310,00\n  Freier Bestand 55 · Lieferzeit Lager 1 Woche · Fertigung 6 Wochen\n\nM-1101  KG-10  Status 03 gesperrt\n\nM-2200  KG-20  Status 01 freigegeben  Index ST-1  Zuschlagsmasse 15,2 kg  Umlagegewicht 21  4 Stück je Karton\n  Kondition USD je 10 ST (en-US): ab 1: 8,950.00 · ab 10: 8,420.00 · ab 50: 7,990.00\n  Freier Bestand 10 · Lieferzeit Lager 2 Wochen · Fertigung 9 Wochen\n\nM-3300  KG-30  Status 01 freigegeben  Index ST-1  Zuschlagsmasse 4,1 kg  Umlagegewicht 6,2  6 Stück je Karton\n  Kondition EUR je 100 ST (de-DE): ab 1: 61.200,00 · ab 20: 58.750,00\n  Rüstkosten 120,00 EUR je Position\n  Freier Bestand 20 · Lieferzeit Lager 1 Woche · Fertigung 5 Wochen",
+  },
+  facts: {
+    tender_reference: "VG-2030-0001", discount_percent: "4", discount_min: "50000", pool_fee: "900", bandsText: "0 ; 20000 ; 0\n20000 ; 60000 ; 2\n60000 ; ; 3",
+    positions: [
+      { position: "01.01", material: "M-1100", quantity_pieces: "40", currency: "EUR", eur_per_currency_unit: "1", price_unit_pieces: "1", number_format: "de-DE", scalesText: "1 ; 1.480,00\n25 ; 1.395,50\n100 ; 1.310,00", surcharge_mass_kg: "9,4", ratesText: "2030-01-01 ; 2030-02-28 ; 1,10\n2030-03-01 ; 2030-04-30 ; 1,25", discount_clause: "base", setup_fee_eur: "0", pool_member: false, allocation_mass: "12,5", carton_size: "8", carton_tariff_eur: "18", bonus_member: false, free_stock: "55", lead_stock_weeks: "1", lead_production_weeks: "6", com_material: "", com_ceiling: "", com_weeks: "" },
+      { position: "01.02", material: "M-2200", quantity_pieces: "18", currency: "USD", eur_per_currency_unit: "0,92", price_unit_pieces: "10", number_format: "en-US", scalesText: "1 ; 8,950.00\n10 ; 8,420.00\n50 ; 7,990.00", surcharge_mass_kg: "15,2", ratesText: "2030-01-01 ; 2030-02-28 ; 1,10\n2030-03-01 ; 2030-04-30 ; 1,25", discount_clause: "base_and_surcharge", setup_fee_eur: "0", pool_member: true, allocation_mass: "21", carton_size: "4", carton_tariff_eur: "32,5", bonus_member: true, free_stock: "10", lead_stock_weeks: "2", lead_production_weeks: "9", com_material: "M-2200", com_ceiling: "20", com_weeks: "2" },
+      { position: "01.03", material: "M-3300", quantity_pieces: "24", currency: "EUR", eur_per_currency_unit: "1", price_unit_pieces: "100", number_format: "de-DE", scalesText: "1 ; 61.200,00\n20 ; 58.750,00", surcharge_mass_kg: "4,1", ratesText: "2030-01-01 ; 2030-02-28 ; 1,10\n2030-03-01 ; 2030-04-30 ; 1,25", discount_clause: "none", setup_fee_eur: "120", pool_member: true, allocation_mass: "6,2", carton_size: "6", carton_tariff_eur: "18", bonus_member: true, free_stock: "20", lead_stock_weeks: "1", lead_production_weeks: "5", com_material: "", com_ceiling: "", com_weeks: "" },
+    ],
+  },
+};
+const blankPos = (n) => ({ position: n, material: "", quantity_pieces: "", currency: "EUR", eur_per_currency_unit: "1", price_unit_pieces: "1", number_format: "de-DE", scalesText: "", surcharge_mass_kg: "", ratesText: "", discount_clause: "base", setup_fee_eur: "", pool_member: false, allocation_mass: "", carton_size: "1", carton_tariff_eur: "", bonus_member: false, free_stock: "", lead_stock_weeks: "", lead_production_weeks: "", com_material: "", com_ceiling: "", com_weeks: "" });
+const blankState = () => ({ example: false, view: "src", date: new Date().toISOString().slice(0, 10), src: { tender: "", spec: "", mail: "", erp: "" }, facts: { tender_reference: "", discount_percent: "", discount_min: "", pool_fee: "", bandsText: "", positions: [blankPos("01.01")] } });
+const exampleState = () => ({ example: true, view: "bid", ...JSON.parse(JSON.stringify(EXAMPLE)) });
+
+/* ---------- text ---------- */
+const T = {
+  en: {
+    eyebrow: "From RFQ to bid · team Adira",
+    lede: "Paste what the tender, the specification, the mailbox and the ERP say. Claude turns it into a table of facts. The pricing engine does the arithmetic, and you see where every cent comes from.",
+    example_banner: "You are looking at an invented example, so the page shows a full bid from the start. Replace the sources with your own, or clear everything.",
+    s1: "Sources", s2: "Facts", s3: "Bid",
+    v1: "Paste what the four systems say", v2: "Check the facts", v3: "Your bid",
+    s1_help: "Rough paste is fine: tables, mails with their headers, several documents in one box.",
+    s2_help: "One card per position, with the values the price depends on. Open a card to correct anything.",
+    s3_help: "Pick a position to see how its unit price adds up.",
+    fl_src: "{n} of 4 pasted", fl_facts: "{n} position(s)", fl_bid: "{t} EUR", fl_none: "nothing yet",
+    to_facts: "Enter the facts by hand", to_bid: "See the bid",
+    src_tender_t: "Tender portal", src_tender_h: "positions and bidder Q&A", src_spec_t: "Customer portal", src_spec_h: "the valid specification",
+    src_mail_t: "Mailbox", src_mail_h: "approvals, tariffs, fixings", src_erp_t: "ERP", src_erp_h: "materials, prices, stock", chars: "characters",
+    edit_o: "Edit", edit_c: "Close", tg_base: "Base", tg_unit: "Unit price", tg_lead: "Lead", tg_pool: "Setup pool", tg_bonus: "Bonus plan", tg_noprice: "No price",
+    pick_hint: "Select a row to see its price build-up.",
+    r_title: "Why this price? {p}, rule by rule", per_piece: "per piece",
+    r1_h: "Buy more, pay less per piece", r1_s: "You order {q} pieces, so the price “from {m}” applies.", r1_no: "No price fits {q} pieces yet.", r1_from: "from {m}",
+    r2_h: "From list price to price per piece", r2_eur: "The list price covers {u} piece(s) and is already in euros.", r2_fx: "The list price covers {u} piece(s) and is in {c}. One {c} is {fx} €.",
+    r3_h: "Order discount", r3_on: "The whole order is worth {u} €. From {t} € on, {pct} % comes off.", r3_off: "The whole order is worth {u} €. That is below {t} €, so nothing comes off.",
+    r3_plain: "{pct} % comes off the order.", r3_zero: "No discount applies to this order.", r3_base: "Here it lowers the base price only.", r3_both: "Here it lowers the base price and the metal surcharge.", r3_none: "This position is excluded from it.",
+    lbl_order: "order value", lbl_thr: "discount from {t} €",
+    r4_h: "Metal surcharge", r4_s: "On {d} the rate is {r} € per kg. {m} kg × {r} € = {v} € per piece.", r4_no: "No rate is valid on {d}, so nothing is added.", r4_none: "This material carries no metal surcharge.",
+    r5_h: "Packaging", r5_s: "{q} pieces, {c} per carton: that takes {n} carton(s). {n} × {t} € = {v} €.",
+    r6_h: "Setup costs", r6_pool: "{f} € of setup is shared between the highlighted positions, by quantity and weight. This position carries {s} €.", r6_own: "This position has its own setup fee of {o} €.", r6_none: "No setup costs for this position.",
+    r7_h: "Project bonus", r7_s: "The positions in the bonus plan are worth {g} € together. That earns {b} € back. This position's share is {s} €.", r7_none: "This position is not in the bonus plan.",
+    r8_h: "Delivery time", r8_commit: "A delivery promise covers up to {c} pieces of this material. You need {d}, so it is {w} week(s).", r8_stock: "{s} pieces are in stock and you need {d}. It ships from stock in {w} week(s).", r8_prod: "Only {s} pieces are in stock but you need {d}. It has to be produced: {w} week(s).",
+    lbl_stock: "in stock: {s}", lbl_need: "you need: {d}", v_ok: "Ready to send: no open points.", v_warn: "{n} point(s) to check before sending",
+    date: "Scenario date", load_example: "Load example", clear_all: "Clear everything",
+    src_tender: "Tender portal: positions and bidder Q&A", src_spec: "Customer portal: specification", src_mail: "Mailbox: approvals, tariffs, fixings", src_erp: "ERP: materials, prices, stock",
+    extract: "Extract facts with Claude", stop: "Stop", add_pos: "Add position",
+    x_wait: "Checking whether Claude is available here…", x_none: "Claude is not available in this view. Enter the facts by hand below.", x_ready: "",
+    x_run: "Reading the sources. This usually takes 20 to 60 seconds.", x_done: "Facts extracted. Check them against the sources before you send the bid.",
+    x_empty: "Paste at least one source first.", x_stopped: "Stopped. The facts were not changed.",
+    x_not_granted: "Claude was not allowed for this page, so nothing was extracted. Enter the facts by hand.", x_rate: "Too many requests right now. Try again in a minute.",
+    x_json: "Claude's answer could not be read as a facts table. Try again.", x_big: "The sources are too long. Paste only the relevant parts.", x_err: "The request failed. Try again.",
+    order_level: "Order", f_ref: "Tender reference", f_disc: "Order discount %", f_min: "Discount applies from (EUR net)", f_pool: "Shared setup pool (EUR)", f_bands: "Project bonus bands: from ; to ; percent",
+    p_position: "Position", p_material: "Material", p_qty: "Quantity (pieces)", p_cur: "Currency", p_fx: "EUR per 1 currency unit", p_unit: "Price per … pieces", p_fmt: "Number format",
+    p_scales: "Price scales: from quantity ; price as displayed", p_mass: "Surcharge mass (kg)", p_rates: "Metal index: valid from ; valid to ; EUR per kg",
+    p_clause: "Order discount applies to", c_base: "Base price", c_both: "Base price and surcharge", c_none: "Nothing",
+    p_setup: "Setup fee (EUR)", p_pool: "Shares the setup pool", p_alloc: "Allocation weight per piece", p_csize: "Pieces per carton", p_ctar: "EUR per carton", p_bonus: "Part of the bonus plan",
+    p_stock: "Free stock", p_ls: "Lead time from stock (weeks)", p_lp: "Lead time production (weeks)", p_cm: "Commitment: material", p_cc: "Commitment: up to (pieces)", p_cw: "Commitment: weeks",
+    sub_price: "Price", sub_costs: "Surcharges and shared costs", sub_delivery: "Delivery", remove: "Remove", pieces: "pcs",
+    t_pos: "Pos.", t_mat: "Material", t_qty: "Qty", t_unit: "Unit price", t_lead: "Lead time", t_line: "Line total", t_total: "Total net (EUR)", weeks: "wk",
+    bf_disc: "Order discount", bf_undisc: "Undiscounted net", bf_bonus: "Project bonus", bf_ref: "Reference",
+    copy_json: "Copy as JSON", save_json: "Save JSON", save_csv: "Save CSV", copied: "Copied.", copy_fail: "Could not copy. Select the text in the bid table instead.", saved: "Saved.", save_declined: "Not saved.", save_fail: "Saving is not available here.",
+    checks: "Check before sending", all_ok: "No open points. Every position has a quantity, a material, a matching price scale and the rates it needs.",
+    w_qty: "{p}: no quantity, so this position is left out of the bid.", w_mat: "{p}: no material number.", w_scale: "{p}: no price scale fits {q} pieces. The base price is 0.",
+    w_fx: "{p}: priced in {c}, but no exchange rate is given. It is treated as 1.", w_rate: "{p}: has a surcharge mass, but no index rate is valid on the scenario date.",
+    w_tar: "{p}: no carton tariff, so packaging is 0.", w_lead: "{p}: lead time is 0 weeks. Check stock and lead time fields.", w_alloc: "{p}: shares the setup pool, but has no allocation weight.",
+    w_thr: "The undiscounted net value {u} is below {t}, so the order discount is not applied.", w_none: "No positions yet. Add one, or extract the facts from the sources.",
+    b_title: "How the unit price of {p} is built", b_none: "Pick a position in the bid to see its price build-up.",
+    b_scale: "Scale price", b_scale_w: "From {m} pieces: {t} {c} per {u} piece(s)", b_scale_no: "No scale fits this quantity",
+    b_base: "Base price per piece", b_base_w: "Divided by the price unit, converted at {fx}", b_base_eur: "Divided by the price unit. EUR needs no conversion",
+    b_disc: "Order discount {pct} %", b_d_base: "Applies to the base price only", b_d_both: "Applies to base price and metal surcharge", b_d_none: "This position is excluded from the discount", b_d_zero: "No discount is in effect",
+    b_metal: "Metal surcharge", b_metal_w: "{m} kg × {r} EUR/kg", b_metal_no: "No rate valid on the scenario date",
+    b_setup: "Setup costs", b_setup_w: "({f} own + {s} pool share) ÷ {q} pieces", b_pack: "Packaging", b_pack_w: "{n} carton(s) × {t} EUR ÷ {q} pieces",
+    b_bonus: "Project bonus", b_bonus_w: "{b} EUR for this position ÷ {q} pieces", b_bonus_no: "Not part of the bonus plan",
+    b_unit: "Unit price", b_unit_w: "Rounded once, at the end",
+    b_lead: "Lead time", l_commit: "Delivery commitment: demand of {d} is within the agreed ceiling", l_stock: "From stock: free stock covers the demand of {d} for this material", l_prod: "From production: free stock does not cover the demand of {d}",
+  },
+  zh: {
+    eyebrow: "从询价到报价 · Adira 团队",
+    lede: "把招标门户、规格书、邮箱和 ERP 里的内容贴进来。Claude 把它整理成一张事实表，定价引擎负责计算，每一分钱的来源你都能看到。",
+    example_banner: "现在显示的是一份虚构的示例，所以页面一打开就有完整的报价。把来源换成你自己的，或者清空全部。",
+    s1: "来源", s2: "事实", s3: "报价",
+    v1: "把四个系统里的内容贴进来", v2: "核对事实", v3: "你的报价",
+    s1_help: "粗略粘贴就行：表格、带邮件头的邮件、一个框里放多份文件都可以。",
+    s2_help: "每个位置一张卡片，列出决定价格的值。要修改就展开卡片。",
+    s3_help: "点一个位置，看它的单价是怎么加出来的。",
+    fl_src: "已贴 {n} / 4", fl_facts: "{n} 个位置", fl_bid: "{t} 欧元", fl_none: "还没有内容",
+    to_facts: "手动填写事实", to_bid: "查看报价",
+    src_tender_t: "招标门户", src_tender_h: "位置清单和投标人问答", src_spec_t: "客户门户", src_spec_h: "当前有效的规格",
+    src_mail_t: "邮箱", src_mail_h: "批准、费率、定价", src_erp_t: "ERP", src_erp_h: "物料、价格、库存", chars: "字符",
+    edit_o: "修改", edit_c: "收起", tg_base: "基础价", tg_unit: "单价", tg_lead: "交期", tg_pool: "共享装调费", tg_bonus: "返利计划", tg_noprice: "没有价格",
+    pick_hint: "选中一行，查看它的价格构成。",
+    r_title: "{p} 为什么是这个价？一条一条看", per_piece: "每件",
+    r1_h: "买得越多，每件越便宜", r1_s: "你订 {q} 件，所以用“{m} 件起”这一档的价格。", r1_no: "还没有适用于 {q} 件的价格。", r1_from: "{m} 件起",
+    r2_h: "从标价到每件价格", r2_eur: "标价是 {u} 件的价格，本来就是欧元。", r2_fx: "标价是 {u} 件的价格，用 {c} 计价。1 {c} = {fx} 欧元。",
+    r3_h: "订单折扣", r3_on: "整张订单价值 {u} 欧元。满 {t} 欧元就减 {pct} %。", r3_off: "整张订单价值 {u} 欧元，没到 {t} 欧元，所以不减。",
+    r3_plain: "整张订单减 {pct} %。", r3_zero: "这张订单没有折扣。", r3_base: "在这个位置上，只减基础价。", r3_both: "在这个位置上，基础价和金属附加费都减。", r3_none: "这个位置不参加折扣。",
+    lbl_order: "订单价值", lbl_thr: "满 {t} 欧元起减",
+    r4_h: "金属附加费", r4_s: "{d} 这天的费率是每公斤 {r} 欧元。{m} 公斤 × {r} 欧元 = 每件 {v} 欧元。", r4_no: "{d} 这天没有有效费率，所以不加。", r4_none: "这个物料没有金属附加费。",
+    r5_h: "包装", r5_s: "{q} 件，每箱装 {c} 件，需要 {n} 箱。{n} × {t} 欧元 = {v} 欧元。",
+    r6_h: "装调费", r6_pool: "有 {f} 欧元装调费由高亮的几个位置按数量和重量分摊。这个位置承担 {s} 欧元。", r6_own: "这个位置自己有 {o} 欧元装调费。", r6_none: "这个位置没有装调费。",
+    r7_h: "项目返利", r7_s: "参加返利的位置合计价值 {g} 欧元，可返还 {b} 欧元。这个位置分到 {s} 欧元。", r7_none: "这个位置不参加返利。",
+    r8_h: "交货时间", r8_commit: "这个物料有交期承诺，上限 {c} 件。你需要 {d} 件，所以是 {w} 周。", r8_stock: "库存有 {s} 件，你需要 {d} 件。从库存发货，{w} 周。", r8_prod: "库存只有 {s} 件，你需要 {d} 件。需要生产，{w} 周。",
+    lbl_stock: "库存：{s}", lbl_need: "需要：{d}", v_ok: "可以发送：没有待处理的问题。", v_warn: "发送前有 {n} 处需要检查",
+    date: "场景日期", load_example: "载入示例", clear_all: "清空全部",
+    src_tender: "招标门户：位置清单和投标人问答", src_spec: "客户门户：技术规格", src_mail: "邮箱：批准、费率、定价", src_erp: "ERP：物料、价格、库存",
+    extract: "用 Claude 抽取事实", stop: "停止", add_pos: "添加位置",
+    x_wait: "正在检查这里能否使用 Claude…", x_none: "当前视图无法使用 Claude。请在下面手动填写事实。", x_ready: "",
+    x_run: "正在阅读来源，通常需要 20 到 60 秒。", x_done: "事实已抽取。发送报价前请对照来源核对。",
+    x_empty: "请先至少粘贴一个来源。", x_stopped: "已停止，事实没有改动。",
+    x_not_granted: "本页面未获准使用 Claude，没有抽取任何内容。请手动填写事实。", x_rate: "当前请求过多，请一分钟后再试。",
+    x_json: "无法把 Claude 的回答读成事实表，请重试。", x_big: "来源太长，请只粘贴相关部分。", x_err: "请求失败，请重试。",
+    order_level: "订单", f_ref: "招标编号", f_disc: "订单折扣 %", f_min: "折扣起点（欧元净额）", f_pool: "共享装调费（欧元）", f_bands: "项目返利阶梯：起 ; 止 ; 百分比",
+    p_position: "位置", p_material: "物料", p_qty: "数量（件）", p_cur: "币种", p_fx: "1 单位外币 = 多少欧元", p_unit: "价格单位（每…件）", p_fmt: "数字格式",
+    p_scales: "价格阶梯：起始数量 ; 页面显示的价格", p_mass: "附加费质量（kg）", p_rates: "金属指数：生效日 ; 截止日 ; 欧元/kg",
+    p_clause: "订单折扣作用于", c_base: "基础价", c_both: "基础价和附加费", c_none: "不打折",
+    p_setup: "装调费（欧元）", p_pool: "参加共享装调费", p_alloc: "每件分摊权重", p_csize: "每箱件数", p_ctar: "每箱费用（欧元）", p_bonus: "参加返利计划",
+    p_stock: "可用库存", p_ls: "库存交期（周）", p_lp: "生产交期（周）", p_cm: "交期承诺：物料", p_cc: "交期承诺：上限（件）", p_cw: "交期承诺：周数",
+    sub_price: "价格", sub_costs: "附加费和分摊费用", sub_delivery: "交付", remove: "删除", pieces: "件",
+    t_pos: "位置", t_mat: "物料", t_qty: "数量", t_unit: "单价", t_lead: "交期", t_line: "行合计", t_total: "净总价（欧元）", weeks: "周",
+    bf_disc: "订单折扣", bf_undisc: "未折扣净额", bf_bonus: "项目返利", bf_ref: "编号",
+    copy_json: "复制 JSON", save_json: "保存 JSON", save_csv: "保存 CSV", copied: "已复制。", copy_fail: "无法复制，请直接选中报价表里的文字。", saved: "已保存。", save_declined: "未保存。", save_fail: "当前无法保存文件。",
+    checks: "发送前检查", all_ok: "没有待处理的问题。每个位置都有数量、物料、匹配的价格阶梯和所需的费率。",
+    w_qty: "{p}：没有数量，该位置不计入报价。", w_mat: "{p}：没有物料号。", w_scale: "{p}：没有适用于 {q} 件的价格阶梯，基础价为 0。",
+    w_fx: "{p}：以 {c} 计价，但没有填汇率，按 1 处理。", w_rate: "{p}：填了附加费质量，但场景日期没有有效的指数费率。",
+    w_tar: "{p}：没有每箱费用，包装费为 0。", w_lead: "{p}：交期为 0 周，请检查库存和交期字段。", w_alloc: "{p}：参加共享装调费，但没有分摊权重。",
+    w_thr: "未折扣净额 {u} 低于 {t}，订单折扣不生效。", w_none: "还没有位置。添加一个，或从来源中抽取事实。",
+    b_title: "{p} 的单价是怎么算出来的", b_none: "点击报价中的一个位置，查看它的价格构成。",
+    b_scale: "阶梯价", b_scale_w: "{m} 件起：{t} {c}，每 {u} 件", b_scale_no: "没有适用于该数量的阶梯",
+    b_base: "每件基础价", b_base_w: "除以价格单位，按 {fx} 换算", b_base_eur: "除以价格单位，欧元无需换算",
+    b_disc: "订单折扣 {pct} %", b_d_base: "只作用于基础价", b_d_both: "作用于基础价和金属附加费", b_d_none: "该位置不享受折扣", b_d_zero: "当前没有生效的折扣",
+    b_metal: "金属附加费", b_metal_w: "{m} kg × {r} 欧元/kg", b_metal_no: "场景日期没有有效费率",
+    b_setup: "装调费", b_setup_w: "（自有 {f} + 共享分摊 {s}）÷ {q} 件", b_pack: "包装", b_pack_w: "{n} 箱 × {t} 欧元 ÷ {q} 件",
+    b_bonus: "项目返利", b_bonus_w: "该位置返利 {b} 欧元 ÷ {q} 件", b_bonus_no: "不参加返利计划",
+    b_unit: "单价", b_unit_w: "只在最后四舍五入一次",
+    b_lead: "交期", l_commit: "交期承诺：需求 {d} 件在约定上限内", l_stock: "库存发货：可用库存覆盖该物料的需求 {d} 件", l_prod: "生产交付：可用库存不足以覆盖需求 {d} 件",
+  },
+};
+
+/* ---------- state ---------- */
+const KEY = "adira-bid-desk-v1";
+let lang = "en", state = exampleState(), result = null, sel = 0, sampleFn = null, sampleState = "wait", ctl = null, downloads = null, xmsg = "x_wait";
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && s.state && s.state.facts && Array.isArray(s.state.facts.positions)) { state = s.state; if (s.lang === "zh" || s.lang === "en") lang = s.lang; } } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ state, lang })); } catch (e) {} };
+const $ = (s) => document.querySelector(s);
+const L = (k, v) => { let s = T[lang][k] ?? k; if (v) for (const [a, b] of Object.entries(v)) s = s.split("{" + a + "}").join(b); return s; };
+const money = (d) => Number(D(d).toFixed(2)).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const num = (d) => D(d).toString().replace(".", ",");
+function el(tag, props, ...kids) { const n = document.createElement(tag); if (props) for (const [k, v] of Object.entries(props)) { if (k === "class") n.className = v; else if (k === "text") n.textContent = v; else if (k in n && typeof v !== "string") n[k] = v; else n.setAttribute(k, v); } n.append(...kids.filter((k) => k != null)); return n; }
+
+/* ---------- forms ---------- */
+function field(id, label, value, onInput, opt = {}) {
+  let input;
+  if (opt.type === "check") {
+    input = el("input", { id, type: "checkbox" }); input.checked = !!value;
+    input.addEventListener("change", () => onInput(input.checked));
+    return el("label", { class: "fld check" + (opt.cls ? " " + opt.cls : ""), for: id }, input, el("span", { text: label }));
+  }
+  if (opt.type === "select") { input = el("select", { id }, ...opt.options.map(([v, t]) => el("option", { value: v, text: t }))); input.value = value; }
+  else if (opt.type === "area") { input = el("textarea", { id, rows: String(opt.rows || 3), spellcheck: "false" }); input.value = value ?? ""; }
+  else { input = el("input", { id, type: "text", inputmode: opt.mode || "text", autocomplete: "off" }); input.value = value ?? ""; }
+  input.addEventListener("input", () => onInput(input.value));
+  return el("label", { class: "fld" + (opt.cls ? " " + opt.cls : ""), for: id }, el("span", { text: label }), input);
+}
+const touch = () => { state.example = false; save(); recompute(); };
+function renderForms() {
+  const f = state.facts, set = (k) => (v) => { f[k] = v; touch(); };
+  $("#order-form").replaceChildren(
+    field("o-ref", L("f_ref"), f.tender_reference, set("tender_reference"), { cls: "half" }),
+    field("o-disc", L("f_disc"), f.discount_percent, set("discount_percent"), { mode: "decimal" }),
+    field("o-min", L("f_min"), f.discount_min, set("discount_min"), { mode: "decimal" }),
+    field("o-pool", L("f_pool"), f.pool_fee, set("pool_fee"), { mode: "decimal" }),
+    field("o-bands", L("f_bands"), f.bandsText, set("bandsText"), { type: "area", cls: "wide" }),
+  );
+  const open = new Set([...document.querySelectorAll("details.pos[open]")].map((d) => d.dataset.i));
+  const first = !document.querySelector("details.pos");
+  $("#positions").replaceChildren(...f.positions.map((p, i) => {
+    const ps = (k) => (v) => { p[k] = v; if (k === "position" || k === "material" || k === "quantity_pieces") sumText(i); touch(); };
+    const id = (k) => "p" + i + "-" + k;
+    const del = el("button", { class: "btn ghost small del", type: "button", text: L("remove") });
+    del.addEventListener("click", (e) => { e.preventDefault(); f.positions.splice(i, 1); sel = 0; touch(); renderForms(); });
+    const d = el("details", { class: "pos" },
+      el("summary", null, el("span", { class: "who" }, el("b", { id: id("sum-b") }), el("span", { id: id("sum-s") })), el("span", { class: "tags", id: id("tags") }),
+        el("span", { class: "edit-hint" }, el("span", { class: "c", text: L("edit_o") + " ▾" }), el("span", { class: "o", text: L("edit_c") + " ▴" }))),
+      el("div", { class: "pos-body" },
+        el("div", { class: "grid" },
+          field(id("position"), L("p_position"), p.position, ps("position")),
+          field(id("material"), L("p_material"), p.material, ps("material")),
+          field(id("qty"), L("p_qty"), p.quantity_pieces, ps("quantity_pieces"), { mode: "numeric" }), el("div", { class: "fld", style: "align-content:end" }, del)),
+        el("div", { class: "sub", text: L("sub_price") }),
+        el("div", { class: "grid" },
+          field(id("cur"), L("p_cur"), p.currency, ps("currency")),
+          field(id("fx"), L("p_fx"), p.eur_per_currency_unit, ps("eur_per_currency_unit"), { mode: "decimal" }),
+          field(id("unit"), L("p_unit"), p.price_unit_pieces, ps("price_unit_pieces"), { mode: "numeric" }),
+          field(id("fmt"), L("p_fmt"), p.number_format, ps("number_format"), { type: "select", options: [["de-DE", "de-DE  1.234,56"], ["en-US", "en-US  1,234.56"]] }),
+          field(id("scales"), L("p_scales"), p.scalesText, ps("scalesText"), { type: "area", cls: "wide" }),
+          field(id("clause"), L("p_clause"), p.discount_clause, ps("discount_clause"), { type: "select", cls: "half", options: [["base", L("c_base")], ["base_and_surcharge", L("c_both")], ["none", L("c_none")]] })),
+        el("div", { class: "sub", text: L("sub_costs") }),
+        el("div", { class: "grid" },
+          field(id("mass"), L("p_mass"), p.surcharge_mass_kg, ps("surcharge_mass_kg"), { mode: "decimal" }),
+          field(id("setup"), L("p_setup"), p.setup_fee_eur, ps("setup_fee_eur"), { mode: "decimal" }),
+          field(id("alloc"), L("p_alloc"), p.allocation_mass, ps("allocation_mass"), { mode: "decimal" }),
+          field(id("csize"), L("p_csize"), p.carton_size, ps("carton_size"), { mode: "numeric" }),
+          field(id("ctar"), L("p_ctar"), p.carton_tariff_eur, ps("carton_tariff_eur"), { mode: "decimal" }),
+          field(id("rates"), L("p_rates"), p.ratesText, ps("ratesText"), { type: "area", cls: "wide" }),
+          field(id("pool"), L("p_pool"), p.pool_member, ps("pool_member"), { type: "check", cls: "half" }),
+          field(id("bonus"), L("p_bonus"), p.bonus_member, ps("bonus_member"), { type: "check", cls: "half" })),
+        el("div", { class: "sub", text: L("sub_delivery") }),
+        el("div", { class: "grid" },
+          field(id("stock"), L("p_stock"), p.free_stock, ps("free_stock"), { mode: "numeric" }),
+          field(id("ls"), L("p_ls"), p.lead_stock_weeks, ps("lead_stock_weeks"), { mode: "numeric" }),
+          field(id("lp"), L("p_lp"), p.lead_production_weeks, ps("lead_production_weeks"), { mode: "numeric" }),
+          field(id("cm"), L("p_cm"), p.com_material, ps("com_material")),
+          field(id("cc"), L("p_cc"), p.com_ceiling, ps("com_ceiling"), { mode: "numeric" }),
+          field(id("cw"), L("p_cw"), p.com_weeks, ps("com_weeks"), { mode: "numeric" }))));
+    d.dataset.i = String(i);
+    if (!first && open.has(String(i))) d.open = true;
+    return d;
+  }));
+  f.positions.forEach((_, i) => sumText(i));
+}
+function sumText(i) {
+  const p = state.facts.positions[i], b = document.getElementById("p" + i + "-sum-b"), s = document.getElementById("p" + i + "-sum-s");
+  if (!b) return;
+  b.textContent = p.position || "—";
+  s.textContent = [p.material, p.quantity_pieces ? p.quantity_pieces + " " + L("pieces") : ""].filter(Boolean).join(" · ");
+  const tags = document.getElementById("p" + i + "-tags"); if (!tags) return;
+  const r = result && result.rows.find((x) => x.p === p), tag = (k, v, warn) => el("span", { class: "tag" + (warn ? " warn" : "") }, k + " ", el("b", { text: v }));
+  tags.replaceChildren(...(r ? [r.scale ? tag(L("tg_base"), money(r.base) + " €") : tag(L("tg_noprice"), "", true), tag(L("tg_unit"), money(r.unitPrice) + " €"), tag(L("tg_lead"), r.lead + " " + L("weeks")),
+    p.pool_member ? tag(L("tg_pool"), money(r.poolShare) + " €") : null, p.bonus_member ? tag(L("tg_bonus"), "− " + money(r.bonus) + " €") : null].filter(Boolean) : []));
+}
+function renderFlow() {
+  const n = ["tender", "spec", "mail", "erp"].filter((k) => (state.src[k] || "").trim()).length;
+  $("#fl-src").textContent = L("fl_src", { n: String(n) });
+  $("#fl-facts").textContent = state.facts.positions.length ? L("fl_facts", { n: String(state.facts.positions.length) }) : L("fl_none");
+  $("#fl-bid").textContent = result && result.rows.length ? L("fl_bid", { t: money(result.total) }) : L("fl_none");
+  for (const k of ["tender", "spec", "mail", "erp"]) $("#cnt-" + k).textContent = (state.src[k] || "").length ? (state.src[k] || "").length + " " + L("chars") : "";
+  const v = ["src", "facts", "bid"].includes(state.view) ? state.view : "src";
+  document.querySelectorAll(".flow-step").forEach((b) => { if (b.dataset.view === v) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  for (const k of ["src", "facts", "bid"]) $("#view-" + k).hidden = k !== v;
+}
+function go(v) { state.view = v; save(); renderFlow(); }
+
+/* ---------- bid ---------- */
+function recompute() {
+  try { result = compute(state.facts, state.date || ""); } catch (e) { result = null; }
+  renderBid();
+  state.facts.positions.forEach((_, i) => sumText(i));
+  renderFlow();
+}
+function warnings() {
+  const w = [], f = state.facts;
+  if (!f.positions.length) return [L("w_none")];
+  if (result.discountBlocked) w.push(L("w_thr", { u: money(result.undiscounted), t: money(result.threshold) }));
+  for (const p of result.skipped) w.push(L("w_qty", { p: p || "—" }));
+  for (const r of result.rows) {
+    const p = r.p, n = r.pos || "—";
+    if (!r.mat) w.push(L("w_mat", { p: n }));
+    if (!r.scale) w.push(L("w_scale", { p: n, q: String(r.qty) }));
+    if (r.cur !== "EUR" && D(p.eur_per_currency_unit).lte(0)) w.push(L("w_fx", { p: n, c: r.cur }));
+    if (r.mass.gt(0) && !r.rate) w.push(L("w_rate", { p: n }));
+    if (D(p.carton_tariff_eur).isZero()) w.push(L("w_tar", { p: n }));
+    if (p.pool_member && D(p.allocation_mass).isZero()) w.push(L("w_alloc", { p: n }));
+    if (r.lead === 0) w.push(L("w_lead", { p: n }));
+  }
+  return w;
+}
+function renderBid() {
+  const rows = $("#rows");
+  if (!result) { rows.replaceChildren(); return; }
+  if (sel >= result.rows.length) sel = 0;
+  rows.replaceChildren(...result.rows.map((r, i) => {
+    const tr = el("tr", { tabindex: "0", "aria-selected": String(i === sel) },
+      el("td", { class: "num", text: r.pos }), el("td", { class: "num", text: r.mat || "—" }), el("td", { class: "num", text: String(r.qty) }),
+      el("td", { class: "num", text: money(r.unitPrice) }), el("td", { class: "num", text: r.lead + " " + L("weeks") }), el("td", { class: "num", text: money(r.line) }));
+    const pick = () => { sel = i; renderBid(); };
+    tr.addEventListener("click", pick);
+    tr.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    return tr;
+  }));
+  $("#total").textContent = money(result.total);
+  const bf = $("#bid-facts"); bf.replaceChildren();
+  const fact = (k, v) => bf.append(el("span", null, L(k) + " ", el("b", { text: v })));
+  fact("bf_ref", state.facts.tender_reference || "—"); fact("bf_undisc", money(result.undiscounted)); fact("bf_disc", num(result.pct) + " %");
+  if (result.bonusTotal.gt(0)) fact("bf_bonus", money(result.bonusTotal));
+  const w = warnings(), box = $("#checks-box");
+  box.replaceChildren(...(w.length ? [el("div", { class: "verdict warn", text: L("v_warn", { n: String(w.length) }) }), el("ul", { class: "checks" }, ...w.map((t) => el("li", { text: t })))] : [el("div", { class: "verdict ok", text: L("v_ok") })]));
+  const r = result.rows[sel], steps = $("#b-steps"); steps.replaceChildren();
+  $("#b-title").textContent = r ? L("b_title", { p: r.pos }) : L("b_none");
+  if (!r) { $("#rules").replaceChildren(); $("#r-title").textContent = ""; return; }
+  const pct = num(result.pct), discBase = r.baseD.minus(r.base), discSur = r.surD.minus(r.massSur), disc = discBase.plus(discSur);
+  const sign = (d) => (d.lt(0) ? "− " : "+ ") + money(d.abs());
+  const add = (a, v, w, cls) => steps.append(el("li", cls ? { class: cls === true ? "sum" : cls } : null, el("span", { text: a }), el("span", { class: "dots" }), el("span", { class: "v", text: v }), el("span", { class: "why", text: w })));
+  add(L("b_scale"), r.scale ? r.scale.text + " " + r.cur : "—", r.scale ? L("b_scale_w", { m: num(r.scale.min), t: r.scale.text, c: r.cur, u: num(r.unit) }) : L("b_scale_no"));
+  add(L("b_base"), money(r.base), r.cur === "EUR" ? L("b_base_eur") : L("b_base_w", { fx: num(r.fx) + " EUR/" + r.cur }));
+  add(L("b_disc", { pct }), disc.isZero() ? "0,00" : sign(disc), result.pct.isZero() ? L("b_d_zero") : L(r.clause === "none" ? "b_d_none" : r.clause === "base_and_surcharge" ? "b_d_both" : "b_d_base"));
+  add(L("b_metal"), "+ " + money(r.massSur), r.rate ? L("b_metal_w", { m: num(r.mass), r: num(r.rate.rate) }) : L("b_metal_no"));
+  add(L("b_setup"), "+ " + money(r.setup.div(r.qty)), L("b_setup_w", { f: money(D(r.p.setup_fee_eur)), s: money(r.poolShare), q: String(r.qty) }));
+  add(L("b_pack"), "+ " + money(r.cartonCost.div(r.qty)), L("b_pack_w", { n: String(r.cartons), t: money(D(r.p.carton_tariff_eur)), q: String(r.qty) }));
+  add(L("b_bonus"), r.bonus.isZero() ? "0,00" : "− " + money(r.bonus.div(r.qty)), r.p.bonus_member ? L("b_bonus_w", { b: money(r.bonus), q: String(r.qty) }) : L("b_bonus_no"));
+  add(L("b_unit"), money(r.unitPrice) + " EUR", L("b_unit_w"), true);
+  add(L("b_lead"), r.lead + " " + L("weeks"), L("l_" + r.why, { d: String(r.demand) }), "lead");
+  renderRules(r);
+}
+
+function renderRules(r) {
+  const p = r.p, box = $("#rules"), cards = [];
+  $("#r-title").textContent = L("r_title", { p: r.pos });
+  const card = (h, amt, visual, ...say) => cards.push(el("article", { class: "rule" }, el("h4", null, el("span", { text: h }), amt ? el("span", { class: "amt", text: amt }) : null), visual, el("p", { class: "say", text: say.filter(Boolean).join(" ") })));
+  const pp = (d) => money(d) + " € " + L("per_piece");
+  // 1 price ladder
+  const sc = [...r.scales].sort((a, b) => a.min.cmp(b.min));
+  card(L("r1_h"), r.scale ? r.scale.text + " " + r.cur : "", el("div", { class: "ladder" }, ...sc.map((x, i) => el("div", { class: "rung" + (x === r.scale ? " on" : ""), style: "padding-top:" + (8 + (sc.length - 1 - i) * 10) + "px" }, el("small", { text: L("r1_from", { m: num(x.min) }) }), el("b", { text: x.text })))),
+    r.scale ? L("r1_s", { q: String(r.qty), m: num(r.scale.min) }) : L("r1_no", { q: String(r.qty) }));
+  // 2 unit and currency
+  const chain = [el("span", { text: (r.scale ? r.scale.text : "0") + " " + r.cur }), el("span", { class: "op", text: "÷" }), el("span", { text: num(r.unit) })];
+  if (r.cur !== "EUR") chain.push(el("span", { class: "op", text: "×" }), el("span", { text: num(r.fx) }));
+  chain.push(el("span", { class: "op", text: "=" }), el("span", { class: "res", text: money(r.base) + " €" }));
+  card(L("r2_h"), pp(r.base), el("div", { class: "chain" }, ...chain), r.cur === "EUR" ? L("r2_eur", { u: num(r.unit) }) : L("r2_fx", { u: num(r.unit), c: r.cur, fx: num(r.fx) }));
+  // 3 discount
+  const und = result.undiscounted, thr = result.threshold, dAmt = r.baseD.minus(r.base).plus(r.surD.minus(r.massSur));
+  let meter = null, line;
+  if (result.hasThreshold && thr.gt(0)) {
+    const max = Decimal.max(und, thr).times("1.15"), w = (d) => Decimal.min(100, d.div(max).times(100)).toFixed(1) + "%";
+    const fill = el("i", { class: result.discountBlocked ? "" : "ok" }); fill.style.width = w(und);
+    const mark = el("u"); mark.style.left = w(thr);
+    meter = el("div", { class: "meter" }, el("div", { class: "track" }, fill, mark), el("div", { class: "lab" }, el("span", { text: L("lbl_order") + ": " + money(und) + " €" }), el("span", { text: L("lbl_thr", { t: money(thr) }) })));
+    line = result.discountBlocked ? L("r3_off", { u: money(und), t: money(thr) }) : L("r3_on", { u: money(und), t: money(thr), pct: num(D(state.facts.discount_percent)) });
+  } else line = result.pct.isZero() ? L("r3_zero") : L("r3_plain", { pct: num(result.pct) });
+  card(L("r3_h"), dAmt.isZero() ? "0,00 €" : "− " + pp(dAmt.abs()), meter, line, result.pct.isZero() ? "" : L(r.clause === "none" ? "r3_none" : r.clause === "base_and_surcharge" ? "r3_both" : "r3_base"));
+  // 4 metal
+  if (r.mass.gt(0) || r.rates.length) card(L("r4_h"), "+ " + pp(r.massSur), r.rates.length ? el("div", { class: "timeline" }, ...r.rates.map((x) => el("div", { class: "win" + (x === r.rate ? " on" : "") }, el("small", { text: x.from + " → " + x.to }), el("b", { text: num(x.rate) + " €/kg" })))) : null,
+    r.rate ? L("r4_s", { d: state.date, r: num(r.rate.rate), m: num(r.mass), v: money(r.massSur) }) : r.mass.gt(0) ? L("r4_no", { d: state.date }) : L("r4_none"));
+  // 5 packaging
+  const shown = Math.min(r.cartons, 14), boxes = [];
+  for (let i = 0; i < shown; i++) { const last = i === r.cartons - 1, n = last ? r.qty - r.csize * (r.cartons - 1) : r.csize; boxes.push(el("div", { class: "box" + (n < r.csize ? " part" : ""), text: String(n) })); }
+  if (r.cartons > shown) boxes.push(el("span", { class: "more", text: "+ " + (r.cartons - shown) }));
+  card(L("r5_h"), "+ " + pp(r.cartonCost.div(r.qty)), el("div", { class: "boxes" }, ...boxes), L("r5_s", { q: String(r.qty), c: String(r.csize), n: String(r.cartons), t: money(D(p.carton_tariff_eur)), v: money(r.cartonCost) }));
+  // 6 setup
+  const poolRows = result.rows.filter((x) => x.p.pool_member), own = D(p.setup_fee_eur);
+  const splitBar = (rows, val) => el("div", { class: "split" }, ...rows.map((x) => { const d = el("div", { class: x === r ? "me" : "", text: x.pos }); d.style.flexGrow = String(Math.max(0.0001, val(x).toNumber())); d.style.flexBasis = "0"; return d; }));
+  if (p.pool_member || own.gt(0)) card(L("r6_h"), "+ " + pp(r.setup.div(r.qty)), p.pool_member && poolRows.length ? splitBar(poolRows, (x) => x.poolShare) : null,
+    p.pool_member ? L("r6_pool", { f: money(D(state.facts.pool_fee)), s: money(r.poolShare) }) : "", own.gt(0) ? L("r6_own", { o: money(own) }) : "");
+  // 7 bonus
+  const bonusRows = result.rows.filter((x) => x.p.bonus_member);
+  if (p.bonus_member) card(L("r7_h"), "− " + pp(r.bonus.div(r.qty)), splitBar(bonusRows, (x) => x.bonus), L("r7_s", { g: money(result.goodsSum), b: money(result.bonusTotal), s: money(r.bonus) }));
+  // 8 delivery
+  const stock = D(p.free_stock), need = new Decimal(r.demand), top = Decimal.max(stock, need, 1), bar = (d, ok) => { const i = el("i", { class: ok ? "ok" : "" }); i.style.width = d.div(top).times(100).toFixed(1) + "%"; return el("div", { class: "track" }, i); };
+  card(L("r8_h"), r.lead + " " + L("weeks"), el("div", { class: "meter" }, el("div", { class: "lab" }, el("span", { text: L("lbl_stock", { s: num(stock) }) })), bar(stock, stock.gte(need)), el("div", { class: "lab" }, el("span", { text: L("lbl_need", { d: String(r.demand) }) })), bar(need, false)),
+    L("r8_" + r.why, { c: num(D(p.com_ceiling)), d: String(r.demand), w: String(r.lead), s: num(stock) }));
+  box.replaceChildren(...cards);
+}
+
+/* ---------- export ---------- */
+function answer() {
+  return { tender_reference: state.facts.tender_reference, decision: "bid", currency: "EUR", discount_percent: result.pct.toNumber(),
+    positions: result.rows.map((r) => ({ position: r.pos, material_number: r.mat, quantity: r.qty, unit_price: r.unitPrice.toNumber(), lead_time_weeks: r.lead,
+      base_unit_price: r.base.toNumber(), surcharge_per_unit: q2(r.massSur.plus(r.setup.div(r.qty))).toNumber(), packaging_per_unit: q2(r.cartonCost.div(r.qty)).toNumber(), rebate_total: r.bonus.toNumber() })),
+    total_net: result.total.toNumber() };
+}
+function csv() {
+  const q = (s) => '"' + String(s).replace(/"/g, '""') + '"';
+  const head = ["position", "material", "quantity", "unit_price_eur", "lead_time_weeks", "line_total_eur"];
+  const body = result.rows.map((r) => [r.pos, r.mat, r.qty, r.unitPrice.toFixed(2), r.lead, r.line.toFixed(2)]);
+  return [head, ...body, ["", "", "", "", "total_net_eur", result.total.toFixed(2)]].map((l) => l.map(q).join(",")).join("\n");
+}
+const flash = (k) => { $("#export-status").textContent = L(k); };
+$("#copy-json").addEventListener("click", async () => { if (!result) return; try { await navigator.clipboard.writeText(JSON.stringify(answer(), null, 2)); flash("copied"); } catch (e) { flash("copy_fail"); } });
+async function saveFile(filename, data) {
+  if (!downloads || !result) return;
+  try { await downloads.save({ filename, data }); flash("saved"); }
+  catch (e) { flash(e && e.code === "declined" ? "save_declined" : "save_fail"); }
+}
+const fileBase = () => "bid-" + (state.facts.tender_reference || "draft").replace(/[^A-Za-z0-9_-]+/g, "-");
+$("#save-json").addEventListener("click", () => saveFile(fileBase() + ".json", JSON.stringify(answer(), null, 2)));
+$("#save-csv").addEventListener("click", () => saveFile(fileBase() + ".csv", csv()));
+
+/* ---------- extraction with Claude ---------- */
+const PROMPT = `You prepare the facts for an industrial bid calculation. Read the four sources and return ONE JSON object, nothing else.
+
+How to choose values:
+- Quantities: start from the bill of quantities. Apply bidder Q&A changes in date order; a withdrawn answer no longer counts, so fall back to the latest change that is still valid. Convert sets to pieces with the specification's pieces per set.
+- Material: the released (not blocked) material of the requirement's catalogue group that matches the requirement.
+- Mails: for each topic use the latest mail dated on or before the scenario date whose subject carries EXACTLY the tender reference. A reference with a suffix (for example ending in -A) is another tender: ignore it.
+- Copy every price scale exactly as displayed into price_text. Do not convert, round or reformat numbers. State the number format of the price condition.
+- Metal index: list every rate window given for the material's index key.
+- If a value is not in the sources, use an empty string. Never guess.
+
+JSON shape (all values as strings unless shown as true/false):
+{"tender_reference":"","discount_percent":"","discount_min_undiscounted_net_eur":"","pool_fee_eur":"",
+ "bonus_bands":[{"from_eur":"","to_eur":"","percent":""}],
+ "positions":[{"position":"","material":"","quantity_pieces":"","currency":"EUR","eur_per_currency_unit":"1","price_unit_pieces":"1","number_format":"de-DE or en-US",
+  "scales":[{"min_qty":"","price_text":""}],"surcharge_mass_kg":"","metal_rates":[{"valid_from":"YYYY-MM-DD","valid_to":"YYYY-MM-DD","rate_eur_per_kg":""}],
+  "discount_clause":"base | base_and_surcharge | none","setup_fee_eur":"","pool_member":false,"allocation_mass":"","carton_size":"","carton_tariff_eur":"","bonus_member":false,
+  "free_stock":"","lead_stock_weeks":"","lead_production_weeks":"","commitment_material":"","commitment_ceiling_pieces":"","commitment_weeks":""}]}`;
+const s = (v) => (v == null ? "" : String(v));
+function applyFacts(j) {
+  if (!j || typeof j !== "object" || !Array.isArray(j.positions) || !j.positions.length) throw { code: "invalid_json" };
+  const clause = (c) => (["base", "base_and_surcharge", "none"].includes(s(c).trim()) ? s(c).trim() : "base");
+  state.facts = {
+    tender_reference: s(j.tender_reference), discount_percent: s(j.discount_percent), discount_min: s(j.discount_min_undiscounted_net_eur), pool_fee: s(j.pool_fee_eur),
+    bandsText: (Array.isArray(j.bonus_bands) ? j.bonus_bands : []).map((b) => [s(b.from_eur), s(b.to_eur), s(b.percent)].join(" ; ")).join("\n"),
+    positions: j.positions.slice(0, 40).map((p) => ({ ...blankPos(""),
+      position: s(p.position), material: s(p.material), quantity_pieces: s(p.quantity_pieces), currency: s(p.currency) || "EUR", eur_per_currency_unit: s(p.eur_per_currency_unit) || "1",
+      price_unit_pieces: s(p.price_unit_pieces) || "1", number_format: s(p.number_format).toLowerCase().startsWith("en") ? "en-US" : "de-DE",
+      scalesText: (Array.isArray(p.scales) ? p.scales : []).map((x) => s(x.min_qty) + " ; " + s(x.price_text)).join("\n"),
+      surcharge_mass_kg: s(p.surcharge_mass_kg), ratesText: (Array.isArray(p.metal_rates) ? p.metal_rates : []).map((x) => [s(x.valid_from), s(x.valid_to), s(x.rate_eur_per_kg)].join(" ; ")).join("\n"),
+      discount_clause: clause(p.discount_clause), setup_fee_eur: s(p.setup_fee_eur), pool_member: p.pool_member === true, allocation_mass: s(p.allocation_mass),
+      carton_size: s(p.carton_size) || "1", carton_tariff_eur: s(p.carton_tariff_eur), bonus_member: p.bonus_member === true,
+      free_stock: s(p.free_stock), lead_stock_weeks: s(p.lead_stock_weeks), lead_production_weeks: s(p.lead_production_weeks),
+      com_material: s(p.commitment_material), com_ceiling: s(p.commitment_ceiling_pieces), com_weeks: s(p.commitment_weeks) })),
+  };
+}
+function renderExtract() {
+  const b = $("#extract"), running = !!ctl;
+  b.disabled = running || sampleState !== "ready"; b.hidden = sampleState === "none";
+  $("#stop").hidden = !running;
+  $("#extract-status").textContent = L(xmsg);
+}
+$("#extract").addEventListener("click", async () => {
+  if (!sampleFn || ctl) return;
+  const src = state.src;
+  if (!(src.tender + src.spec + src.mail + src.erp).trim()) { xmsg = "x_empty"; renderExtract(); return; }
+  ctl = new AbortController(); xmsg = "x_run"; renderExtract();
+  const input = PROMPT + "\n\nScenario date: " + (state.date || "unknown") + "\n\n# TENDER PORTAL\n" + src.tender.slice(0, 50000) + "\n\n# SPECIFICATION\n" + src.spec.slice(0, 40000) + "\n\n# MAILBOX\n" + src.mail.slice(0, 50000) + "\n\n# ERP\n" + src.erp.slice(0, 50000);
+  try {
+    const j = await sampleFn.json(input, { signal: ctl.signal });
+    applyFacts(j); state.example = false; state.view = "facts"; sel = 0; save(); xmsg = "x_done";
+    document.querySelectorAll("details.pos").forEach((d) => d.remove());
+    renderForms(); recompute(); renderBanner();
+  } catch (e) {
+    const c = e && e.code;
+    xmsg = c === "cancelled" ? "x_stopped" : c === "invalid_json" ? "x_json" : c === "rate_limited" ? "x_rate" : c === "prompt_too_large" ? "x_big" : "x_err";
+    if (["not_granted", "sampling_disabled", "not_declared", "capability_disabled", "capability_removed"].includes(c)) { xmsg = "x_not_granted"; sampleState = "none"; }
+  } finally { ctl = null; renderExtract(); }
+});
+$("#stop").addEventListener("click", () => { if (ctl) ctl.abort(); });
+
+/* ---------- page ---------- */
+function renderBanner() { $("#example-banner").hidden = !state.example; }
+function renderAll() {
+  document.querySelectorAll("[data-i]").forEach((n) => { n.textContent = L(n.dataset.i); });
+  document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
+  document.documentElement.lang = lang;
+  $("#scenario-date").value = state.date || "";
+  for (const k of ["tender", "spec", "mail", "erp"]) $("#src-" + k).value = state.src[k] || "";
+  renderBanner(); renderForms(); recompute(); renderExtract();
+}
+for (const k of ["tender", "spec", "mail", "erp"]) $("#src-" + k).addEventListener("input", (e) => { state.src[k] = e.target.value; state.example = false; save(); renderBanner(); renderFlow(); });
+$("#scenario-date").addEventListener("input", (e) => { state.date = e.target.value; touch(); renderBanner(); });
+$("#load-example").addEventListener("click", () => { state = exampleState(); sel = 0; save(); document.querySelectorAll("details.pos").forEach((d) => d.remove()); renderAll(); });
+$("#clear-all").addEventListener("click", () => { state = blankState(); sel = 0; save(); document.querySelectorAll("details.pos").forEach((d) => d.remove()); renderAll(); });
+$("#add-pos").addEventListener("click", () => {
+  const n = state.facts.positions.length + 1; state.facts.positions.push(blankPos("01." + String(n).padStart(2, "0")));
+  touch(); renderForms(); renderBanner();
+  const d = document.querySelector('details.pos[data-i="' + (n - 1) + '"]'); if (d) d.open = true;
+  renderFlow();
+});
+document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => { lang = b.dataset.lang; save(); document.querySelectorAll("details.pos").forEach((d) => d.remove()); renderAll(); }));
+document.querySelectorAll(".flow-step").forEach((b) => b.addEventListener("click", () => go(b.dataset.view)));
+document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => { go(b.dataset.go); window.scrollTo({ top: 0 }); }));
+document.addEventListener("input", (e) => { if (e.target.closest && e.target.closest("#order-form, #positions")) renderBanner(); });
+renderAll();
+
+(async () => {
+  const c = window.claude;
+  if (!c || !c.use) { sampleState = "none"; xmsg = "x_none"; renderExtract(); return; }
+  c.use("downloads").then((d) => { downloads = d; $("#save-json").hidden = !d; $("#save-csv").hidden = !d; }).catch(() => {});
+  try { sampleFn = await c.use("sample"); } catch (e) { sampleFn = null; }
+  sampleState = sampleFn ? "ready" : "none"; if (xmsg === "x_wait") xmsg = sampleFn ? "x_ready" : "x_none";
+  renderExtract();
+})();
+</script>
+
+</body>
+</html>
