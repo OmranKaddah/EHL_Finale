@@ -1,0 +1,7 @@
+<task-notification>
+<task-id>b6e8lqkb0</task-id>
+<tool-use-id>REDACTED</tool-use-id>
+<output-file>/private/tmp/claude-502/-Users-Moritz-workspace-EHL-Finale/9c3ef7c5-c17a-44c8-bdcc-c25f3bce0604/tasks/b6e8lqkb0.output</output-file>
+<status>completed</status>
+<summary>Background command "Wait for test run end, show score and submit steps" completed (exit code 0)</summary>
+</task-notification>
