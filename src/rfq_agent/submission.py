@@ -93,6 +93,10 @@ async def find_identity(task, session, site, field, identity):
                   + json.dumps({key: field.get(key) for key in ('label', 'name', 'type')})
                   + '. Use the registered BIDDER from the runtime brief. Quote the exact detail '
                   'and evidence that it belongs to the bidder (a signed-in account profile is valid). '
+                  'Inspect the signed-in account identity or profile first. If this site does '
+                  'not expose the detail, finish with no evidence rather than revisiting '
+                  'tenders or their submission wizard. Login usernames are not contact '
+                  'addresses unless the UI independently identifies them as such. '
                   'No tender documents, prices, discounts or signing codes. Finish once quoted; '
                   'never invent a contact address or substitute the buyer.'}
     result = await planner.run_planner(focused, source_page, assignment, ledger, max_steps=25)
@@ -316,6 +320,8 @@ registered_bidder_identity contains separately extracted company/tax/contact val
 During bidder registration use fill_identity with an identity_index, not fill_answer.
 If a required registration detail is missing, find it in an authorized runtime
 website (for example a bidder profile or the bidder's signed-in account identity).
+For a missing contact address, choose a source with an observed signed-in account
+address or profile. Do not select a website merely because it hosts this form.
 Choose the source yourself with find_identity(target, site_id). This starts a
 focused source mission for that observed field and preserves the current form.
 The resulting quoted details appear in registered_bidder_identity; use fill_identity

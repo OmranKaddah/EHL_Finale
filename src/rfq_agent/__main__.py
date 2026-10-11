@@ -73,6 +73,31 @@ async def review_available_evidence(task, state, ledger):
         print(f'Evidence review failed ({type(exc).__name__}); retaining prior validated candidate and source evidence', flush=True)
 
 
+async def recover_minimum_bid(task, sites, page, ledger, diagnostics):
+    """Recover missing position evidence with one bounded, model-directed mission."""
+    target = task.get('submission', {})
+    site = planner._site_for_url(target.get('url', ''), sites)
+    remaining = run_contract.seconds_left(task)
+    if target.get('kind') != 'site' or site is None or remaining <= 420:
+        raise Unresolved('insufficient time for minimum-bid source recovery and signing')
+    duration = min(120, remaining - 360)
+    focused = dict(task, investigation_reserve=0,
+        expires_at=min(task['expires_at'], (time.time() + duration) * 1000),
+        access=[{'siteId': site['site_id'], 'url': site['url'],
+                 'credentials': planner._credential_values(site)}])
+    assignment = {'site_id': site['site_id'], 'worker_id': 'minimum-recovery',
+        'review_completion': True,
+        'objective': 'Recover ONLY the complete position identifier list for the tender in '
+        'the runtime brief. Choose and read an original position document or live '
+        'position overview on this website. Quote ALL identifiers with evidence that '
+        'the list is complete. No pricing, technical specifications, discount, or '
+        'signing investigation. Finish once the complete list is quoted.'}
+    print('Recovering complete position coverage for the minimum bid', flush=True)
+    result = await planner.run_planner(focused, page, assignment, ledger, max_steps=24)
+    diagnostics.append({'phase': 'position_recovery', 'result': result})
+    return await omitted_bid(task, ledger, diagnostics=diagnostics)
+
+
 async def investigate_site(task, site, steps, goal=None):
     """An isolated debug run stops at source evidence; it never submits a bid."""
     task = dict(task, access=[{'siteId': site['site_id'], 'url': site['url'], 'credentials': site['_credentials']}], investigation_reserve=30, single_site_debug=True)
@@ -203,6 +228,10 @@ async def main(options=None) -> int:
                     print(f'Investigation round {round_number}: {len(assignments)} focused workers', flush=True)
                     task['investigation_state'] = state.snapshot()
                     task['investigation_reserve'] = 480
+                    # Investigation must leave time for normalization as well as
+                    # signing. Using the same reserve for both made review expire
+                    # immediately when a worker reached the investigation cutoff.
+                    task['coordinator_reserve'] = 360
                     for index, assignment in enumerate(assignments):
                         assignment['worker_id'] = f'worker-{index}'
                     batch = await run_batch(task, sessions, assignments, ledger, options.parallel)
@@ -226,9 +255,6 @@ async def main(options=None) -> int:
                         assignments = await state.assignments(task, sites, count)
                     except Unresolved as exc:
                         print(f'Follow-up dispatch rejected ({type(exc).__name__}); retaining prior model-assigned objectives', flush=True)
-                if state.answer is None and await ledger.snapshot() and run_contract.seconds_left(task) > 310:
-                    phase = "evidence normalization and audit"
-                    await review_available_evidence(task, state, ledger)
                 if state.answer is None and await ledger.snapshot() and run_contract.seconds_left(task) > 300:
                     phase = "minimum bid fallback"
                     diagnostics = []
@@ -239,8 +265,16 @@ async def main(options=None) -> int:
                                              'gaps': state.gaps, 'fallback': 'validated_all_omitted'}
                         print('Commercial evidence incomplete; attempting the runtime-permitted minimum bid', flush=True)
                     except Unresolved as exc:
-                        print('Minimum bid fallback lacks validated permission or position coverage', flush=True)
                         diagnostics.append({'phase': 'refusal', 'reason': str(exc)[:500]})
+                        try:
+                            answer, omitted = await recover_minimum_bid(task, sites, sessions[0].page, ledger, diagnostics)
+                            state.answer = answer
+                            state.calculation = {'answer': answer, 'omitted': omitted,
+                                'gaps': state.gaps, 'fallback': 'validated_all_omitted'}
+                            print('Recovered minimum bid; proceeding to registration and signing', flush=True)
+                        except Unresolved as recovery_error:
+                            print('Minimum bid fallback lacks validated permission or position coverage', flush=True)
+                            diagnostics.append({'phase': 'recovery_refusal', 'reason': str(recovery_error)[:500]})
                     finally:
                         write_artifact('minimum-fallback.json', diagnostics)
                 if state.answer:

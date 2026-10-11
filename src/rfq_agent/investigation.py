@@ -31,6 +31,7 @@ class InvestigationState:
                 'scenario': self.bundle['scenario'] if self.bundle else {}}
 
     async def call(self, task, system, payload, reserve=480, phase="coordinator"):
+        reserve = task.get('coordinator_reserve', reserve)
         budget = lambda: seconds_left(task) - reserve
         for attempt in range(2):
             raw = await model.complete_with_retry([
