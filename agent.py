@@ -549,6 +549,96 @@ async def calculate(task, evidence: str, deadline):
     return ans
 
 
+NO_BID_PROMPT = """You audit ONE question for a tender bid: is there a tender position for which the ERP has NO active
+material matching its requirement? The brief's rules decide which attributes must match and what counts as active.
+Work only from the evidence below; do not guess.
+
+For every tender position:
+- required: the attributes its requirement demands under the brief (governing specification revision, amendments and
+  any stroke derivation applied).
+- candidates: EVERY ERP material in the evidence whose required attributes ALL match exactly. For each one give
+  status_quote = the text from the evidence that shows THIS material's own status, copied character by character;
+  one_status_assigned = true only if exactly one status is assigned to this material (a field listing several codes
+  side by side next to a legend is the list of possible keys, NOT a status: then false);
+  blocked = true only if that one assigned status means the material may not be sold (blocked, locked, gesperrt...).
+erp_search_complete = true only if the ERP reports show the complete result list for each requirement (all result
+pages seen) and no ERP report is cut off, missing or unfinished.
+discount_percent = the discount the brief's rules require in a no-bid answer; if the brief does not say, the
+governing approved discount for this tender (0 if none);
+discount_has_minimum = true if that approval depends on a minimum order value.
+
+Only JSON:
+{"tender_reference": "exactly as the brief names it", "erp_search_complete": true, "discount_percent": 0, "discount_has_minimum": false,
+ "positions": [{"position": "...", "required": {}, "candidates": [{"material": "...", "status_quote": "...",
+ "one_status_assigned": true, "blocked": false}]}]}
+"""
+
+
+ACTIVE_PROMPT = """For every tender position, name ONE ERP material from the evidence that the brief's rules allow to
+be offered for it: its required attributes all match exactly (governing specification revision, amendments and any
+stroke derivation applied) AND it is active. A material counts as not active only if exactly one status is assigned
+to it and that status blocks it; a field listing several codes next to a legend is not a status. If the evidence
+holds no such material for a position, give null. Work only from the evidence; do not guess.
+Only JSON: {"positions": [{"position": "...", "active_material": "material number or null"}]}
+"""
+
+
+def _squash(text) -> str:
+    return re.sub(r"\s+", " ", str(text)).strip().lower()
+
+
+def no_bid_position(audit: dict, evidence: str):
+    """The position that proves a no-bid, or None. Proof = the audit saw the whole catalogue and, for one position,
+    either no material matches or every matching material has one assigned, blocking status quoted from the evidence."""
+    if not isinstance(audit, dict) or audit.get("erp_search_complete") is not True:
+        return None
+    if len(audit.get("positions") or []) < 1 or not any(p.get("candidates") for p in audit["positions"]):
+        return None  # an audit that lists nothing has not looked
+    ev = _squash(evidence)
+    for p in audit.get("positions") or []:
+        pid = str(p.get("position") or "").strip()
+        if not pid or pid.lower() not in ev:
+            continue
+        cands = p.get("candidates") or []
+        if all(c.get("blocked") is True and c.get("one_status_assigned") is True and
+               len(_squash(c.get("status_quote"))) >= 3 and _squash(c.get("status_quote")) in ev and
+               _squash(c.get("material")) in ev for c in cands):
+            return pid
+    return None
+
+
+async def no_bid_check(task, evidence: str, erp_reports, deadline):
+    """A no-bid is submitted only on proof: two independent audits of the evidence must name the same position."""
+    if any("cut off" in r or "(ERP report missing)" in r or "NOT COMPLETED" in r for r in erp_reports):
+        return None
+    tail = "\n" + brief_block(task) + "\n# EVIDENCE\n" + evidence
+    budget = max(10, min(90, deadline - time.time()))
+    # two different questions: "which position has only blocked matches" and "name an active match per position"
+    replies = await asyncio.gather(within(ask(NO_BID_PROMPT + tail, no_think=True), budget),
+                                   within(ask(ACTIVE_PROMPT + tail, no_think=True), budget), return_exceptions=True)
+    try:
+        audits = [parse_json(replies[0])]
+        active = {str(p.get("position")).strip(): p.get("active_material")
+                  for p in parse_json(replies[1]).get("positions") or []}
+    except Exception as e:
+        log(f"no-bid audit unusable: {type(e).__name__}")
+        return None
+    log(f"no-bid audit: {json.dumps(audits[0], ensure_ascii=False)[:1800]}")
+    pid = no_bid_position(audits[0], evidence)
+    log(f"no-bid audit names {pid}; active materials {active}")
+    if not pid or pid not in active or active[pid] not in (None, "", "null") or \
+            not any(v not in (None, "", "null") for v in active.values()):
+        return None
+    a = audits[0]
+    pct = 0 if a.get("discount_has_minimum") else a.get("discount_percent") or 0
+    m = re.search(r"\(([A-Z]{2,}-\d{4}-\d+)\)", task["brief"])
+    ref = m.group(1) if m else str(a.get("tender_reference") or "").strip()
+    if not ref or ref not in task["brief"]:
+        return None  # without the brief's own reference nothing is eligible
+    return {"tender_reference": ref, "decision": "no_bid", "currency": "EUR",
+            "discount_percent": float(pct), "positions": [], "total_net": 0}
+
+
 def configurator_recipes(answer: dict, plan: dict) -> str:
     """Per position: the requirement attributes (to drive dependent dropdowns) and every value to enter, so each
     position can be filled in one go."""
@@ -573,9 +663,14 @@ async def submit(task, tabs, answer, deadline, plan=None):
     access = {s["siteId"]: s for s in task["access"]}
     system = (GENERAL + "\nYour websites:\n" + site_login(access["tender-portal"]) + "\n" + site_login(access["mail"]) +
               "\n\n" + brief_block(task))
+    no_bid_note = ("" if answer.get("decision") != "no_bid" else
+                   "\nTHIS IS A NO-BID: where the form asks for the kind of offer, choose the option that declines "
+                   "the tender (a waiver / no-bid declaration, e.g. Verzichtserklärung, kein Angebot) instead of a "
+                   "main bid. Enter no positions; where discount and net total are asked, enter the values given "
+                   "above (total 0). Then acknowledge the documents, request the TAN and sign as described.\n")
     job = ("Enter and sign this bid in the tender portal, following the brief's Submission section exactly. The "
            "research is finished: do NOT verify or look anything up, enter the values as given.\n" +
-           json.dumps(answer, ensure_ascii=False, indent=1) +
+           json.dumps(answer, ensure_ascii=False, indent=1) + no_bid_note +
            "\n\nPer-position recipe (fill each position in ONE fill_form call, in this order: the requirement "
            "attributes in the configurator's dependent dropdowns, then the catalogue number, quantity, unit price, "
            "breakdown fields, lead time; pass apply_button for the dropdowns):\n" + configurator_recipes(answer, plan) +
@@ -720,7 +815,12 @@ async def solve(task, pw):
             open(dev.get("out", "evidence.txt"), "w").write(balanced)
             log(f"DEV: evidence saved ({len(balanced)} chars)")
             return None
-        answer = await extract_and_compute(task, balanced, end - 9.5 * 60)
+        try:
+            answer = await within(no_bid_check(task, balanced, erp_reports, end - 10 * 60), 100)
+        except Exception as e:
+            log(f"no-bid check skipped: {type(e).__name__}")
+        if answer is None:
+            answer = await extract_and_compute(task, balanced, end - 9.5 * 60)
         if not answer.get("positions") and answer.get("decision") == "bid":
             raise ValueError("no positions extracted")
     except Exception:
