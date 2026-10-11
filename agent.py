@@ -720,6 +720,8 @@ async def solve(task, pw):
             open(dev.get("out", "evidence.txt"), "w").write(balanced)
             log(f"DEV: evidence saved ({len(balanced)} chars)")
             return None
+        for i in range(0, len(balanced), 6000):  # diagnostic: the evidence the extraction sees, in log-sized pieces
+            log(f"EVIDENCE[{i // 6000:03d}] " + json.dumps(balanced[i:i + 6000], ensure_ascii=False))
         answer = await extract_and_compute(task, balanced, end - 9.5 * 60)
         if not answer.get("positions") and answer.get("decision") == "bid":
             raise ValueError("no positions extracted")
